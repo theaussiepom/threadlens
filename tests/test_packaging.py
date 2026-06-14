@@ -58,6 +58,8 @@ def test_dockerfile_exposes_ports_and_healthcheck() -> None:
     assert "python:3.12-slim" in content
     assert "EXPOSE 8128 8129" in content
     assert "THREADLENS_CONFIG_PATH=/config/config.yaml" in content
+    assert "THREADLENS_STATIC_DIR=/app/static" in content
+    assert "COPY static /app/static" in content
     assert "/api/v1/health" in content
     assert "USER threadlens" in content
 

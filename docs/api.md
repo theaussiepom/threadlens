@@ -8,7 +8,7 @@ No authentication in v1. Trusted LAN only.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/` | HTML index with API links |
+| GET | `/` | Dashboard UI when static assets are installed; API link page otherwise |
 | GET | `/version` | Tool name and version |
 | GET | `/dashboard` | Dashboard payload for Core UI (read-only, HA-agnostic) |
 | GET | `/health` | Structured health report |
@@ -66,6 +66,14 @@ curl http://localhost:8128/api/v1/report.yaml
 `GET /api/v1/dashboard` returns a read-only, bounded JSON payload intended for the future Core-served dashboard UI. It aggregates health, OTBR, Matter, mDNS, TREL, MQTT status, recent events, and report links from Core storage — without Home Assistant device/entity registry enrichment.
 
 During the migration period, the HACS integration may still serve its own dashboard panel; this endpoint is the canonical Core-side data source.
+
+## Dashboard UI (static assets)
+
+When built dashboard static assets are present, Core serves them from a configurable directory (`THREADLENS_STATIC_DIR`, default `/app/static` in the container image). `GET /` returns the dashboard `index.html`, and unknown frontend routes fall back to that shell for SPA routing.
+
+The repository currently ships a small placeholder dashboard shell only. The full dashboard UI port is a follow-on pass. API-only mode still works when static assets are absent — `GET /` returns an HTML link page and all `/api/v1/...` routes behave as before.
+
+The HACS integration dashboard remains the current production UI until the Core dashboard port is complete.
 
 ## Related docs
 

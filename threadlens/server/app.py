@@ -16,6 +16,7 @@ from threadlens.collectors.otbr_rest import OtbrCollector
 from threadlens.config import RuntimeMode, ThreadLensConfig
 from threadlens.mqtt import MqttPublisher
 from threadlens.server.routes import create_router
+from threadlens.server.static import api_landing_page, mount_static_ui
 from threadlens.storage.db import Database
 from threadlens.storage.repositories import StorageRepository
 
@@ -105,32 +106,12 @@ def create_server_app(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> 
     app.state.report_last_generated_at = None
     app.state.report_last_window = None
 
-    @app.get("/", response_class=HTMLResponse)
-    async def root() -> str:
-        return f"""<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>ThreadLens</title></head>
-<body>
-  <h1>ThreadLens</h1>
-  <p>ThreadLens is running (v{__version__}).</p>
-  <ul>
-    <li><a href="/api/v1/dashboard">/api/v1/dashboard</a></li>
-    <li><a href="/api/v1/health">/api/v1/health</a></li>
-    <li><a href="/api/v1/status">/api/v1/status</a></li>
-    <li><a href="/api/v1/capabilities">/api/v1/capabilities</a></li>
-    <li><a href="/api/v1/state">/api/v1/state</a></li>
-    <li><a href="/api/v1/events">/api/v1/events</a></li>
-    <li><a href="/api/v1/otbrs">/api/v1/otbrs</a></li>
-    <li><a href="/api/v1/networks">/api/v1/networks</a></li>
-    <li><a href="/api/v1/matter-servers">/api/v1/matter-servers</a></li>
-    <li><a href="/api/v1/matter-nodes">/api/v1/matter-nodes</a></li>
-    <li><a href="/api/v1/mdns/services">/api/v1/mdns/services</a></li>
-    <li><a href="/api/v1/trel/services">/api/v1/trel/services</a></li>
-    <li><a href="/api/v1/report.yaml">/api/v1/report.yaml</a></li>
-    <li><a href="/api/v1/report.json">/api/v1/report.json</a></li>
-  </ul>
-</body>
-</html>"""
-
     app.include_router(create_router(config, active_mode=active_mode), prefix="/api/v1")
+
+    if not mount_static_ui(app):
+
+        @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+        async def root() -> str:
+            return api_landing_page(version=__version__)
+
     return app
