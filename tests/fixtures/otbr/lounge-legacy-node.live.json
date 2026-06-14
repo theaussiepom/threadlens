@@ -1,0 +1,19 @@
+{
+  "baId": "4143cde851bb1a94f9871e4fd79c5910",
+  "baState": "",
+  "state": "router",
+  "routerCount": 2,
+  "rlocAddress": "fd69:c9a4:5fa:97e8:0:ff:fe00:7c00",
+  "extAddress": "766680fcaee6a50b",
+  "networkName": "ha-thread-11",
+  "rloc16": "0x7c00",
+  "routerId": 31,
+  "extPanId": "3ca76a62d0c054c3",
+  "leaderData": {
+    "partitionId": 595842150,
+    "weighting": 65,
+    "dataVersion": 204,
+    "stableDataVersion": 11,
+    "leaderRouterId": 15
+  }
+}

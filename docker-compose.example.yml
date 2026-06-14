@@ -1,0 +1,33 @@
+# ThreadLens — default bridge networking
+#
+# Good for:
+#   - REST/API access
+#   - OTBR REST polling
+#   - Matter Server websocket observation
+#   - MQTT publishing
+#   - report generation
+#
+# Limitation:
+#   - mDNS/TREL multicast observation is often degraded or unavailable in bridge mode.
+#   - If /api/v1/mdns/services and /api/v1/trel/services stay empty while OTBR/Matter
+#     work, use host networking on Linux (docker-compose.host-network.example.yml)
+#     or macvlan/ipvlan. See docs/mdns-networking.md.
+
+services:
+  threadlens:
+    build: .
+    image: ghcr.io/theaussiepom/threadlens:local
+    container_name: threadlens
+    restart: unless-stopped
+    ports:
+      - "8128:8128" # server API
+      - "8129:8129" # agent API (when mode is agent or both)
+    volumes:
+      - ./examples/config:/config:ro
+      - ./data:/data
+    environment:
+      TZ: Australia/Brisbane
+      THREADLENS_CONFIG_PATH: /config/config.yaml
+      THREADLENS_MODE: server
+    # Optional: run server + local agent together
+    # THREADLENS_MODE: both

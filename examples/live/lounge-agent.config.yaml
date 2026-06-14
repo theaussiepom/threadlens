@@ -1,0 +1,32 @@
+# ThreadLens 0.1.0 — Lounge Pi (192.168.100.7) agent-only live test config.
+# Copy to the Lounge Pi and mount at /config/config.yaml.
+
+site:
+  name: "Ben Home"
+
+mode: agent
+
+server:
+  host: "0.0.0.0"
+  port: 8128
+
+agent:
+  host: "0.0.0.0"
+  port: 8129
+
+storage:
+  sqlite_path: "/data/threadlens.db"
+  event_retention_days: 30
+
+mqtt:
+  enabled: false
+
+mdns:
+  enabled: false
+
+otbrs: []
+
+matter_servers: []
+
+reports:
+  redact_secrets: true

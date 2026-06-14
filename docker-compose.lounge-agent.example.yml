@@ -1,0 +1,36 @@
+# ThreadLens 0.1.1 — Lounge Pi (192.168.100.7) live test
+#
+# Runs agent-only mode with host networking.
+# Do not use ports: with network_mode: host.
+#
+# Before starting:
+#   mkdir -p data/lounge-agent
+#
+# Usage:
+#   docker compose -f docker-compose.lounge-agent.example.yml up -d
+
+services:
+  threadlens-agent:
+    image: ghcr.io/theaussiepom/threadlens:0.1.1
+    container_name: threadlens-agent
+    restart: unless-stopped
+    network_mode: host
+    command: ["--mode", "agent"]
+    volumes:
+      - ./examples/live/lounge-agent.config.yaml:/config/config.yaml:ro
+      - ./data/lounge-agent:/data
+    environment:
+      TZ: Australia/Brisbane
+      THREADLENS_CONFIG_PATH: /config/config.yaml
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8129/api/v1/agent/health', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3

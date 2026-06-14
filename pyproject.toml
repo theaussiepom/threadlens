@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "threadlens"
+version = "0.1.1"
+description = "Read-only Thread and Matter-over-Thread observability suite"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "theaussiepom" }]
+dependencies = [
+    "aiosqlite>=0.20.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "pyyaml>=6.0.2",
+    "httpx>=0.28.0",
+    "zeroconf>=0.132.0",
+    "websockets>=13.0",
+    "aiomqtt>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/theaussiepom/threadlens"
+Repository = "https://github.com/theaussiepom/threadlens"
+Documentation = "https://github.com/theaussiepom/threadlens#readme"
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "ruff>=0.8.0",
+]
+
+[project.scripts]
+threadlens = "threadlens.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["threadlens"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
