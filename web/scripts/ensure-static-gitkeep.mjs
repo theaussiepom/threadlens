@@ -1,0 +1,12 @@
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const GITKEEP = `# The built ThreadLens dashboard (index.html + assets/) is emitted here by the
+# web/ Vite build (\`npm --prefix web ci && npm --prefix web run build\`), by the
+# Docker image build, and by CI. Generated assets are intentionally not
+# committed; this file keeps the directory present in fresh checkouts.
+`;
+
+const staticDir = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../static");
+writeFileSync(resolve(staticDir, ".gitkeep"), GITKEEP);

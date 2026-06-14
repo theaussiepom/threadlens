@@ -72,6 +72,10 @@ curl http://127.0.0.1:8128/api/v1/version
 
 Copy [examples/config/config.yaml](examples/config/config.yaml), adjust OTBR/Matter/MQTT hosts for your LAN, and mount at `/config/config.yaml`. For MQTT secrets, use a local override file (gitignored) — see [docs/configuration.md](docs/configuration.md).
 
+## Dashboard
+
+ThreadLens Core serves a **mobile-friendly React dashboard** at `/`. It is an incident console for Thread/Matter-over-Thread: open `http://<host>:8128/` to see the incident summary, at-a-glance Matter node health (with node drilldown), and OTBR/Thread/Matter/mDNS/TREL/MQTT status. The UI is built into the Docker image (no Node at runtime, no external CDN) and reads only the read-only `api/v1/dashboard` payload, so it also works behind a reverse proxy or Home Assistant Ingress. The HACS integration dashboard remains available during migration; the HAOS add-on exposes this Core dashboard via Ingress after the Core `0.2.0` release. Dashboard source and build instructions live in [`web/`](web/README.md); see [docs/api.md](docs/api.md).
+
 ## Minimal sample config
 
 ```yaml

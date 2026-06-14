@@ -23,9 +23,35 @@ jobs:
       - name: Pytest
         run: pytest -q
 
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: Build dashboard
+        run: npm run build
+      - name: Verify built dashboard assets
+        run: |
+          test -f ../static/index.html
+          test -d ../static/assets
+          grep -q './assets/' ../static/index.html
+
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build Docker image
+      - name: Build Docker image (includes dashboard build)
         run: docker build -t threadlens:test .

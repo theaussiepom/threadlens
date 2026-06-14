@@ -1,5 +1,14 @@
-FROM python:3.12-slim AS builder
+# Frontend build stage: compiles the Core-owned React/Vite dashboard.
+# Vite `build.outDir` is "../static", so output lands at /static.
+FROM node:20-slim AS web
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
 
+# Python build stage: installs the ThreadLens Core package.
+FROM python:3.12-slim AS builder
 WORKDIR /build
 COPY pyproject.toml README.md ./
 COPY threadlens ./threadlens
@@ -16,7 +25,8 @@ RUN useradd --create-home --shell /usr/sbin/nologin threadlens
 WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/threadlens /usr/local/bin/threadlens
-COPY static /app/static
+# Built dashboard assets only — no Node runtime in the final image.
+COPY --from=web /static /app/static
 
 ENV THREADLENS_STATIC_DIR=/app/static
 

@@ -8,7 +8,9 @@ All notable changes to ThreadLens are documented in this file.
 
 - `GET /api/v1/dashboard` — Core-native dashboard payload aggregation (read-only, Home Assistant agnostic)
 - Dashboard semantics for reconciled OTBR endpoint mismatch, informational foreign TREL, Matter node health classification, incident summary, and relative report URLs
-- Core static dashboard serving foundation (`THREADLENS_STATIC_DIR`, SPA fallback, API route guard, placeholder `static/index.html`)
+- Core static dashboard serving foundation (`THREADLENS_STATIC_DIR`, SPA fallback, API route guard)
+- Canonical Core-owned **React + TypeScript dashboard** (source in `web/`, built with Vite into `static/`) — the first Core-owned React/mobile dashboard release. Mobile-first and desktop-friendly, served by Core at `/`, consuming `api/v1/dashboard` via path-safe relative URLs (works under root, reverse-proxy subpaths, and Home Assistant Ingress prefixes). Includes incident summary, at-a-glance Matter node health grouped by severity with full-screen/side-panel node drilldown, OTBR/network/Matter/mDNS/TREL/MQTT sections, relative report links, raw diagnostics, light/dark themes, and loading/error/stale/empty states. No Node at runtime, no external CDN, no Home Assistant dependency.
+- Multi-stage Docker build adds a Node stage that compiles the dashboard and copies built assets into `/app/static`; CI validates the frontend lint/typecheck/build alongside Python checks and the Docker image build
 
 ## [0.1.2] - 2026-06-14
 
