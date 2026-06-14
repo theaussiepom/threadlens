@@ -6,7 +6,7 @@
   "description": "Core-owned React dashboard for ThreadLens (served by ThreadLens Core)",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/ensure-static-gitkeep.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "eslint ."

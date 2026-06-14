@@ -43,6 +43,21 @@ npm run typecheck   # tsc -b
 npm run build
 ```
 
+## Live smoke test (manual)
+
+After `npm run build`, start Core with `THREADLENS_STATIC_DIR` pointing at `../static`
+and open `http://127.0.0.1:8128/`. Confirm:
+
+- Dashboard loads (no blank screen); header, incident, Matter node health, infrastructure,
+  reports, and collapsed diagnostics render.
+- `GET /api/v1/health` and `/api/v1/dashboard` return JSON (not dashboard HTML).
+- `/node/test` falls back to the dashboard index; `/api/v1/does-not-exist` returns API 404.
+- Report YAML/JSON links use relative `api/v1/report.*` paths (no HA proxy).
+- Mobile emulation: no horizontal scroll; incident appears above infrastructure.
+
+Optional Playwright check (no repo dependency): `npx @playwright/test@1.49.1` with a local
+spec against `http://127.0.0.1:8128`.
+
 ## Structure
 
 ```
