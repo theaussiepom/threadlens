@@ -1,0 +1,31 @@
+# ThreadLens — Linux host networking (recommended for mDNS/TREL)
+#
+# Good for:
+#   - _trel._udp
+#   - _meshcop._udp
+#   - _matter._tcp
+#   - _matterc._udp
+#   - reliable LAN multicast DNS observation
+#
+# Requirements:
+#   - Linux host (host networking is not supported the same way on Docker Desktop/macOS)
+#   - Do not use ports: when network_mode is host
+#
+# Alternatives:
+#   - macvlan or ipvlan networks can also expose multicast to the container
+#   - See docs/mdns-networking.md
+
+services:
+  threadlens:
+    build: .
+    image: ghcr.io/theaussiepom/threadlens:local
+    container_name: threadlens
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./examples/config:/config:ro
+      - ./data:/data
+    environment:
+      TZ: Australia/Brisbane
+      THREADLENS_CONFIG_PATH: /config/config.yaml
+      THREADLENS_MODE: both

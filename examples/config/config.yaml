@@ -1,0 +1,86 @@
+site:
+  name: "Home"
+
+mode: server
+
+server:
+  host: "0.0.0.0"
+  port: 8128
+
+agent:
+  host: "0.0.0.0"
+  port: 8129
+
+storage:
+  sqlite_path: "/data/threadlens.db"
+  event_retention_days: 30
+
+flapping:
+  debounce_seconds: 30
+  matter_node_availability_warning_24h: 3
+  matter_node_availability_degraded_24h: 6
+  matter_node_unavailable_critical_minutes: 30
+  otbr_role_changes_warning_1h: 2
+  otbr_role_changes_degraded_1h: 5
+  mdns_service_flaps_warning_1h: 5
+  mdns_service_flaps_degraded_1h: 15
+
+otbr:
+  poll_interval_seconds: 60
+  request_timeout_seconds: 5
+  allow_read_only_actions: false
+  use_legacy_node_fallback: true
+
+mqtt:
+  # Enable after configuring your Home Assistant MQTT broker.
+  enabled: false
+  host: "homeassistant.local"
+  port: 1883
+  # username: null
+  # password: null
+  discovery_prefix: "homeassistant"
+  topic_prefix: "threadlens"
+  retain_discovery: true
+  retain_state: true
+  publish_interval_seconds: 30
+  per_trel_service_entities: false
+  per_node_entities: true
+
+mdns:
+  enabled: true
+  services:
+    - "_trel._udp.local."
+    - "_meshcop._udp.local."
+    - "_matter._tcp.local."
+    - "_matterc._udp.local."
+
+# Uncomment and adjust IPs for your environment.
+# ThreadLens is read-only; REST/websocket URLs must be reachable from the container/host.
+otbrs: []
+# otbrs:
+#   - id: "study"
+#     name: "Study OTBR"
+#     rest_url: "http://192.168.100.4:8081"
+#     agent_url: null  # optional co-located agent, e.g. http://192.168.100.4:8129
+#   - id: "lounge"
+#     name: "Lounge OTBR"
+#     rest_url: "http://192.168.100.7:8081"
+#     agent_url: null
+
+matter:
+  reconnect_initial_seconds: 5
+  reconnect_max_seconds: 60
+  request_timeout_seconds: 10
+
+matter_servers: []
+# matter_servers:
+#   - id: "study_matter"
+#     name: "Study Matter Server"
+#     websocket_url: "ws://192.168.100.4:5580/ws"
+#     variant: "python"
+
+reports:
+  redact_secrets: true
+
+homeassistant:
+  mqtt_discovery_enabled: true

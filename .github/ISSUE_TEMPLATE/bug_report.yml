@@ -1,0 +1,33 @@
+name: Bug report
+description: Report unexpected behaviour in ThreadLens
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste secrets.** Redact MQTT passwords, Thread network keys, PSKc, Matter fabric credentials, and host passwords.
+  - type: input
+    id: version
+    attributes:
+      label: ThreadLens version
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: Config shape (redacted), endpoints checked, relevant logs without secrets
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: Docker/host OS, OTBR image, Matter server variant, mDNS networking mode

@@ -1,0 +1,35 @@
+{
+	"data":	{
+		"id":	"766680fcaee6a50b",
+		"type":	"threadBorderRouter",
+		"attributes":	{
+			"extAddress":	"766680fcaee6a50b",
+			"mlEidIid":	"0000000000000000",
+			"omrIpv6Address":	"::",
+			"hostName":	"",
+			"role":	"",
+			"mode":	{
+				"deviceTypeFTD":	false,
+				"rxOnWhenIdle":	false,
+				"fullNetworkData":	false
+			},
+			"baId":	"4143cde851bb1a94f9871e4fd79c5910",
+			"baState":	"enabled",
+			"state":	"disabled",
+			"routerCount":	0,
+			"rlocAddress":	"::",
+			"networkName":	"",
+			"rloc16":	"0x0000",
+			"routerId":	0,
+			"leaderData":	{
+				"partitionId":	0,
+				"weighting":	0,
+				"dataVersion":	0,
+				"stableDataVersion":	0,
+				"leaderRouterId":	0
+			},
+			"extPanId":	"3ca76a62d0c054c3",
+			"created":	"2026-06-13T23:56:53+00:00"
+		}
+	}
+}
