@@ -115,10 +115,16 @@ class ReportGenerator:
         capabilities = self._build_capabilities(
             otbr_states=otbr_states,
             matter_servers=matter_servers,
+            matter_nodes=matter_nodes,
             mdns_services=mdns_services,
             trel_services=trel_services,
             agent_states=agent_states,
         )
+        if capabilities.matter_read_probe_diagnostics:
+            aggregates.extra["read_probe_note"] = (
+                "Safe read probes check Matter-layer read reachability. "
+                "They do not prove open/close or other commands are working."
+            )
 
         foreign_trel = sum(
             1 for service in trel_services if service.is_foreign and service.currently_visible
@@ -196,6 +202,7 @@ class ReportGenerator:
         *,
         otbr_states: list[OtbrState],
         matter_servers: list[MatterServerState],
+        matter_nodes: list[MatterNodeState],
         mdns_services: list[MdnsServiceState],
         trel_services: list[TrelServiceState],
         agent_states: list[AgentState],
@@ -228,6 +235,9 @@ class ReportGenerator:
             matter_subscription_diagnostics=False,
             matter_case_diagnostics=False,
             matter_command_diagnostics=False,
+            matter_read_probe_diagnostics=any(
+                node.read_probe_diagnostics_available for node in matter_nodes
+            ),
             agent_api_available=agent_api,
             agent_local_diagnostics=agent_local_diagnostics,
             agent_ssh_available=False,
@@ -390,6 +400,20 @@ class ReportGenerator:
                     subscription_diagnostics_available=node.subscription_diagnostics_available,
                     case_diagnostics_available=node.case_diagnostics_available,
                     command_diagnostics_available=node.command_diagnostics_available,
+                    read_probe_diagnostics_available=node.read_probe_diagnostics_available,
+                    last_read_probe_at=node.last_read_probe_at,
+                    last_read_probe_ok=node.last_read_probe_ok,
+                    last_read_probe_limited=node.last_read_probe_limited,
+                    last_read_probe_attribute_path=node.last_read_probe_attribute_path,
+                    last_read_probe_duration_ms=node.last_read_probe_duration_ms,
+                    last_read_probe_error_code=node.last_read_probe_error_code,
+                    read_probe_failures_24h=node.read_probe_failures_24h,
+                    read_probe_successes_24h=node.read_probe_successes_24h,
+                    ping_diagnostics_available=node.ping_diagnostics_available,
+                    last_ping_at=node.last_ping_at,
+                    last_ping_ok=node.last_ping_ok,
+                    ping_failures_24h=node.ping_failures_24h,
+                    ping_successes_24h=node.ping_successes_24h,
                     health=HealthStatus(
                         state=health.state if health else HealthState.UNKNOWN,
                         reasons=health.reasons if health else [],

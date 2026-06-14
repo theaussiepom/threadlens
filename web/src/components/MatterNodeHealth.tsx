@@ -4,8 +4,10 @@ import { nodeClassMeta } from "../utils/health";
 import { Badge, Card, EmptyHint } from "./primitives";
 
 const GROUP_ORDER: { key: string; title: string }[] = [
-  { key: "unavailable", title: "Needs attention" },
+  { key: "unavailable", title: "Unavailable" },
+  { key: "needs_attention", title: "Needs attention" },
   { key: "recently_unstable", title: "Recently unstable" },
+  { key: "diagnostics_limited", title: "Diagnostics limited" },
   { key: "unknown", title: "Unknown" },
   { key: "healthy", title: "Healthy" },
 ];
@@ -16,6 +18,10 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
   const down = node.unsubscribe_count_24h || 0;
   const up = node.resubscribe_count_24h || 0;
   const showChurn = down > 0 || up > 0;
+  const readProbe = node.read_probe;
+  const showReadProbe =
+    readProbe?.diagnostics_available &&
+    (readProbe.last_ok === false || (readProbe.failures_24h ?? 0) > 0);
 
   return (
     <button
@@ -36,6 +42,9 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
               {down} down / {up} up (24h)
             </span>
           )}
+          {showReadProbe && (
+            <span className="tl-node-read-probe tl-muted">Read probe issue</span>
+          )}
           {node.last_event_at && (
             <span className="tl-node-last">Last event {fmtRelative(node.last_event_at)}</span>
           )}
@@ -43,6 +52,9 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
       </span>
       <span className="tl-node-end">
         <Badge tone={meta.tone}>{meta.label}</Badge>
+        {readProbe?.diagnostics_available && !showReadProbe && node.classification === "healthy" && (
+          <Badge tone="info">Read diagnostics</Badge>
+        )}
         <span className="tl-node-chevron" aria-hidden="true">
           ›
         </span>

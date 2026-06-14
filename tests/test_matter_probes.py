@@ -201,6 +201,10 @@ async def test_read_probe_unsupported_attribute_event(tmp_path: Path) -> None:
     result = await probe_task
 
     assert result.read_probe_ok is False
+    state = observer._nodes[24]
+    assert state.last_read_probe_ok is None
+    assert state.last_read_probe_limited is True
+    assert state.read_probe_failures_24h == 0
     events = await _node_events(observer, 24)
     unsupported = [event for event in events if event.event_type == READ_PROBE_UNSUPPORTED]
     assert len(unsupported) == 1

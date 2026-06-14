@@ -10,10 +10,33 @@ export type HealthState = "healthy" | "warning" | "degraded" | "critical" | "unk
 
 export type NodeClassification =
   | "unavailable"
+  | "needs_attention"
   | "recently_unstable"
+  | "diagnostics_limited"
   | "healthy"
   | "unknown"
   | string;
+
+export interface ReadProbeDiagnostics {
+  diagnostics_available: boolean;
+  last_at: string | null;
+  last_ok: boolean | null;
+  limited?: boolean;
+  attribute_path: string | null;
+  duration_ms: number | null;
+  error_code: string | number | null;
+  failures_24h: number | null;
+  successes_24h: number | null;
+  summary: string | null;
+}
+
+export interface PingProbeDiagnostics {
+  diagnostics_available: boolean;
+  last_at: string | null;
+  last_ok: boolean | null;
+  failures_24h: number | null;
+  successes_24h: number | null;
+}
 
 export type IncidentState = "ok" | "watch" | "incident" | "unknown" | string;
 
@@ -141,6 +164,8 @@ export interface MatterNode {
   median_offline_seconds_24h: number | null;
   offline_episodes_24h: number;
   total_offline_seconds_24h: number;
+  read_probe?: ReadProbeDiagnostics | null;
+  ping_probe?: PingProbeDiagnostics | null;
 }
 
 export interface MatterSection {
@@ -151,6 +176,8 @@ export interface MatterSection {
   unavailable_count: number;
   unavailable_nodes: { node_id: number | null; server_id: unknown; friendly_name: string }[];
   unstable_count: number;
+  needs_attention_count?: number;
+  diagnostics_limited_count?: number;
   healthy_count: number;
   unknown_count: number;
   recent_unavailable_count: number;

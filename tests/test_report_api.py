@@ -180,6 +180,33 @@ def _app_config(tmp_path: Path) -> ThreadLensConfig:
 
 
 @pytest.mark.asyncio
+async def test_report_includes_read_probe_fields(report_context) -> None:
+    ctx = await report_context()
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_NODE,
+        "matter_node:study_matter:24",
+        MatterNodeState(
+            node_id=24,
+            server_id="study_matter",
+            friendly_name="Living Blind 3",
+            available=True,
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=False,
+            read_probe_failures_24h=2,
+            read_probe_successes_24h=5,
+        ),
+    )
+    report = await ReportGenerator(ctx).generate(window="24h")
+    node = report.matter_nodes[0]
+    assert node.read_probe_diagnostics_available is True
+    assert node.last_read_probe_ok is False
+    assert node.read_probe_failures_24h == 2
+    assert report.capabilities.matter_read_probe_diagnostics is True
+    assert "read_probe_note" in report.aggregates.extra
+    assert "command failed" not in report.aggregates.extra["read_probe_note"].lower()
+
+
+@pytest.mark.asyncio
 async def test_report_yaml_and_json_serialisation(report_context) -> None:
     ctx = await report_context()
     report = await ReportGenerator(ctx).generate(window="24h")

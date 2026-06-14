@@ -26,9 +26,11 @@ export interface ClassMeta {
 
 export const NODE_CLASS_META: Record<string, ClassMeta> = {
   unavailable: { label: "Needs attention", tone: "critical", order: 0 },
-  recently_unstable: { label: "Recently unstable", tone: "warn", order: 1 },
-  unknown: { label: "Unknown", tone: "unknown", order: 2 },
-  healthy: { label: "Healthy", tone: "ok", order: 3 },
+  needs_attention: { label: "Needs attention", tone: "degraded", order: 1 },
+  recently_unstable: { label: "Recently unstable", tone: "warn", order: 2 },
+  diagnostics_limited: { label: "Diagnostics limited", tone: "info", order: 3 },
+  unknown: { label: "Unknown", tone: "unknown", order: 4 },
+  healthy: { label: "Healthy", tone: "ok", order: 5 },
 };
 
 export function nodeClassMeta(classification: NodeClassification): ClassMeta {

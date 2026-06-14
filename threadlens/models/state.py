@@ -156,6 +156,7 @@ class MatterNodeState(BaseModel):
     last_read_probe_error_code: int | str | None = None
     read_probe_failures_24h: int | None = None
     read_probe_successes_24h: int | None = None
+    last_read_probe_limited: bool = False
     ping_diagnostics_available: bool = False
     last_ping_at: datetime | None = None
     last_ping_ok: bool | None = None

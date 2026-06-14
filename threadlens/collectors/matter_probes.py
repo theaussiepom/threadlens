@@ -32,7 +32,6 @@ READ_PROBE_FAILURE_EVENT_TYPES = frozenset(
     {
         READ_PROBE_FAILED,
         READ_PROBE_TIMED_OUT,
-        READ_PROBE_UNSUPPORTED,
     }
 )
 READ_PROBE_SUCCESS_EVENT_TYPES = frozenset({READ_PROBE_SUCCEEDED})
@@ -174,7 +173,32 @@ class MatterProbeRunner:
         """Run one read probe (and optional ping) for a single node."""
         if not self._config.manual_enabled:
             return await self._skip(node_id, "manual probes disabled")
+        return await self._run_probe_for_node(
+            node_id,
+            device_types=device_types,
+            include_ping=include_ping,
+        )
 
+    async def run_scheduled_probe(
+        self,
+        node_id: int,
+        *,
+        include_ping: bool | None = None,
+    ) -> MatterProbeRunResult:
+        """Run a scheduled read probe when probes are explicitly enabled."""
+        if not self._config.enabled:
+            return await self._skip(node_id, "probes disabled")
+        if not self._config.schedule_enabled:
+            return await self._skip(node_id, "scheduled probes disabled")
+        return await self._run_probe_for_node(node_id, include_ping=include_ping)
+
+    async def _run_probe_for_node(
+        self,
+        node_id: int,
+        *,
+        device_types: list[str] | None = None,
+        include_ping: bool | None = None,
+    ) -> MatterProbeRunResult:
         node = self._get_node(node_id)
         if node is None:
             return await self._skip(node_id, "node not known")
@@ -241,6 +265,7 @@ class MatterProbeRunner:
             timeout=timeout,
         )
 
+        limited = False
         if command_result.timed_out:
             event_type = READ_PROBE_TIMED_OUT
             message = f"Read probe timed out for Matter node {node.node_id} on {self._server_id}"
@@ -256,6 +281,7 @@ class MatterProbeRunner:
             message = f"Read probe unsupported for Matter node {node.node_id} on {self._server_id}"
             severity = EventSeverity.WARNING
             ok = False
+            limited = True
         else:
             event_type = READ_PROBE_FAILED
             message = f"Read probe failed for Matter node {node.node_id} on {self._server_id}"
@@ -273,19 +299,20 @@ class MatterProbeRunner:
             event_types=READ_PROBE_SUCCESS_EVENT_TYPES,
             since=since,
         )
-        if not ok:
-            failures_24h += 1
-        else:
+        if ok:
             successes_24h += 1
+        elif not limited:
+            failures_24h += 1
 
         updated = node.model_copy(
             update={
                 "read_probe_diagnostics_available": True,
                 "last_read_probe_at": now,
-                "last_read_probe_ok": ok,
+                "last_read_probe_ok": None if limited else ok,
+                "last_read_probe_limited": limited,
                 "last_read_probe_attribute_path": attribute_path,
                 "last_read_probe_duration_ms": command_result.duration_ms,
-                "last_read_probe_error_code": None if ok else command_result.error_code,
+                "last_read_probe_error_code": None if ok or limited else command_result.error_code,
                 "read_probe_failures_24h": failures_24h,
                 "read_probe_successes_24h": successes_24h,
             }

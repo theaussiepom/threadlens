@@ -84,6 +84,31 @@ async def _enrich_otbr_states_with_health(
     return enriched
 
 
+async def _enrich_matter_nodes_with_health(
+    health_report: Any,
+    states: list[MatterNodeState],
+) -> list[MatterNodeState]:
+    health_by_id = {item.id: item for item in health_report.matter_nodes}
+    enriched: list[MatterNodeState] = []
+    for state in states:
+        subject_id = f"matter_node:{state.server_id}:{state.node_id}"
+        health = health_by_id.get(subject_id)
+        if health is None:
+            enriched.append(state)
+            continue
+        enriched.append(
+            state.model_copy(
+                update={
+                    "health": HealthStatus(
+                        state=health.state,
+                        reasons=health.reasons,
+                    )
+                }
+            )
+        )
+    return enriched
+
+
 def _build_status_payload(
     request: Request,
     config: ThreadLensConfig,
@@ -207,6 +232,7 @@ async def build_dashboard_response(
         repository, CurrentStateType.MATTER_SERVER, MatterServerState
     )
     matter_nodes = await _list_states(repository, CurrentStateType.MATTER_NODE, MatterNodeState)
+    matter_nodes = await _enrich_matter_nodes_with_health(health_report, matter_nodes)
     mdns_services = await _list_states(repository, CurrentStateType.MDNS_SERVICE, MdnsServiceState)
     trel_services = await _list_states(repository, CurrentStateType.TREL_SERVICE, TrelServiceState)
     events_payload = await build_events_payload(repository, window="24h", limit=100)

@@ -589,7 +589,142 @@ async def test_subscription_diagnostics_unavailable_does_not_degrade_health(
 
 
 @pytest.mark.asyncio
-async def test_matter_node_health_unchanged_when_read_probe_fields_present(
+async def test_matter_node_health_with_read_probe_failure(
+    health_context,
+    tmp_path: Path,
+) -> None:
+    ctx = await health_context(
+        config=ThreadLensConfig(
+            storage={"sqlite_path": str(tmp_path / "probe-fail-health.db")},
+            mdns=MdnsConfig(enabled=False),
+        )
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_SERVER,
+        "study_matter",
+        MatterServerState(
+            id="study_matter",
+            name="Study",
+            connected=True,
+            capabilities=MatterServerCapabilities(
+                node_inventory_available=True,
+                node_availability_available=True,
+            ),
+        ),
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_NODE,
+        "matter_node:study_matter:24",
+        MatterNodeState(
+            node_id=24,
+            server_id="study_matter",
+            available=True,
+            availability_flaps_24h=0,
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=False,
+            read_probe_failures_24h=1,
+            read_probe_successes_24h=0,
+        ),
+    )
+
+    report = await HealthEngine(ctx).build_report(version="0.1.0", mode="server")
+    node = report.matter_nodes[0]
+    assert node.state == HealthState.WARNING
+    assert "matter_node_read_probe_failed" in node.reasons
+
+
+@pytest.mark.asyncio
+async def test_matter_node_health_repeated_read_probe_failures_degraded(
+    health_context,
+    tmp_path: Path,
+) -> None:
+    ctx = await health_context(
+        config=ThreadLensConfig(
+            storage={"sqlite_path": str(tmp_path / "probe-degraded-health.db")},
+            flapping=FlappingConfig(matter_node_read_probe_failures_degraded_24h=3),
+            mdns=MdnsConfig(enabled=False),
+        )
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_SERVER,
+        "study_matter",
+        MatterServerState(
+            id="study_matter",
+            name="Study",
+            connected=True,
+            capabilities=MatterServerCapabilities(
+                node_inventory_available=True,
+                node_availability_available=True,
+            ),
+        ),
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_NODE,
+        "matter_node:study_matter:24",
+        MatterNodeState(
+            node_id=24,
+            server_id="study_matter",
+            available=True,
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=False,
+            read_probe_failures_24h=3,
+            read_probe_successes_24h=0,
+        ),
+    )
+
+    report = await HealthEngine(ctx).build_report(version="0.1.0", mode="server")
+    node = report.matter_nodes[0]
+    assert node.state == HealthState.DEGRADED
+    assert "matter_node_read_probe_failures_24h" in node.reasons
+
+
+@pytest.mark.asyncio
+async def test_matter_node_health_unsupported_probe_not_degraded(
+    health_context,
+    tmp_path: Path,
+) -> None:
+    ctx = await health_context(
+        config=ThreadLensConfig(
+            storage={"sqlite_path": str(tmp_path / "probe-limited-health.db")},
+            mdns=MdnsConfig(enabled=False),
+        )
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_SERVER,
+        "study_matter",
+        MatterServerState(
+            id="study_matter",
+            name="Study",
+            connected=True,
+            capabilities=MatterServerCapabilities(
+                node_inventory_available=True,
+                node_availability_available=True,
+            ),
+        ),
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_NODE,
+        "matter_node:study_matter:24",
+        MatterNodeState(
+            node_id=24,
+            server_id="study_matter",
+            available=True,
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=None,
+            last_read_probe_limited=True,
+            read_probe_failures_24h=0,
+            read_probe_successes_24h=0,
+        ),
+    )
+
+    report = await HealthEngine(ctx).build_report(version="0.1.0", mode="server")
+    node = report.matter_nodes[0]
+    assert node.state == HealthState.HEALTHY
+    assert "matter_node_read_probe_failed" not in node.reasons
+
+
+@pytest.mark.asyncio
+async def test_matter_node_health_unchanged_when_probe_diagnostics_unavailable(
     health_context,
     tmp_path: Path,
 ) -> None:
@@ -620,10 +755,9 @@ async def test_matter_node_health_unchanged_when_read_probe_fields_present(
             server_id="study_matter",
             available=True,
             availability_flaps_24h=0,
-            read_probe_diagnostics_available=True,
-            last_read_probe_ok=False,
-            read_probe_failures_24h=12,
-            read_probe_successes_24h=0,
+            read_probe_diagnostics_available=False,
+            last_read_probe_ok=None,
+            read_probe_failures_24h=None,
         ),
     )
 
