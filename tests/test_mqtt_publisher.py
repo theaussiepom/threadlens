@@ -469,6 +469,147 @@ async def test_subscription_diagnostics_unavailable_in_attributes(tmp_path: Path
 
 
 @pytest.mark.asyncio
+async def test_matter_read_probe_entities_when_diagnostics_available(tmp_path: Path) -> None:
+    config = ThreadLensConfig(
+        storage={"sqlite_path": str(tmp_path / "read-probe-mqtt.db")},
+        mdns=MdnsConfig(enabled=False),
+        mqtt=MqttConfig(enabled=True, per_node_entities=True),
+        matter_servers=[
+            MatterServerConfig(
+                id="study_matter",
+                name="Study Matter",
+                websocket_url="ws://127.0.0.1:5580/ws",
+            )
+        ],
+    )
+    database = Database(config.storage.sqlite_path)
+    repository = StorageRepository(database)
+    await repository.initialize()
+    snapshot = PublishSnapshot(
+        config=config,
+        version="0.1.0",
+        mode="server",
+        storage_ready=True,
+        health=await _health_report(config, repository),
+        otbr_states=[],
+        matter_servers=[],
+        matter_nodes=[
+            MatterNodeState(
+                node_id=24,
+                server_id="study_matter",
+                friendly_name="Living Blind 3",
+                available=True,
+                read_probe_diagnostics_available=True,
+                last_read_probe_ok=False,
+                read_probe_failures_24h=2,
+            ),
+            MatterNodeState(
+                node_id=25,
+                server_id="study_matter",
+                friendly_name="Kitchen Blind",
+                available=True,
+                read_probe_diagnostics_available=False,
+            ),
+        ],
+        thread_networks=[],
+        collector_status={"mdns": {}, "otbr": {}, "matter": {}},
+    )
+    publications = build_publications(snapshot)
+    read_ok = _find_publication(
+        publications, "threadlens_matter_node_study_matter_24_read_probe_ok"
+    )
+    failures = _find_publication(
+        publications, "threadlens_matter_node_study_matter_24_read_probe_failures_24h"
+    )
+    global_issues = _find_publication(publications, "threadlens_matter_read_probe_issues")
+    assert read_ok.state == "OFF"
+    assert "Read Probe OK" in read_ok.discovery["name"]
+    assert failures.state == "2"
+    assert "Read Probe Failures 24h" in failures.discovery["name"]
+    assert global_issues.state == "1"
+    assert global_issues.attributes["read_probe_diagnostics_available"] is True
+    assert not any(
+        item.object_id.endswith("_read_probe_ok")
+        for item in publications
+        if "study_matter_25" in item.object_id
+    )
+
+
+@pytest.mark.asyncio
+async def test_matter_read_probe_none_maps_to_unknown(tmp_path: Path) -> None:
+    config = ThreadLensConfig(
+        storage={"sqlite_path": str(tmp_path / "read-probe-unknown.db")},
+        mdns=MdnsConfig(enabled=False),
+        mqtt=MqttConfig(enabled=True, per_node_entities=True),
+    )
+    database = Database(config.storage.sqlite_path)
+    repository = StorageRepository(database)
+    await repository.initialize()
+    snapshot = PublishSnapshot(
+        config=config,
+        version="0.1.0",
+        mode="server",
+        storage_ready=True,
+        health=await _health_report(config, repository),
+        otbr_states=[],
+        matter_servers=[],
+        matter_nodes=[
+            MatterNodeState(
+                node_id=10,
+                server_id="home",
+                available=True,
+                read_probe_diagnostics_available=True,
+                last_read_probe_ok=None,
+                last_read_probe_limited=True,
+                read_probe_failures_24h=None,
+            ),
+        ],
+        thread_networks=[],
+        collector_status={"mdns": {}, "otbr": {}, "matter": {}},
+    )
+    publications = build_publications(snapshot)
+    read_ok = _find_publication(publications, "threadlens_matter_node_home_10_read_probe_ok")
+    failures = _find_publication(
+        publications, "threadlens_matter_node_home_10_read_probe_failures_24h"
+    )
+    global_issues = _find_publication(publications, "threadlens_matter_read_probe_issues")
+    assert read_ok.state == "unknown"
+    assert failures.state == "unknown"
+    assert global_issues.state == "0"
+    assert "command" not in read_ok.discovery["name"].lower()
+
+
+@pytest.mark.asyncio
+async def test_matter_read_probe_global_unknown_without_diagnostics(tmp_path: Path) -> None:
+    config = ThreadLensConfig(
+        storage={"sqlite_path": str(tmp_path / "read-probe-no-diag.db")},
+        mdns=MdnsConfig(enabled=False),
+        mqtt=MqttConfig(enabled=True, per_node_entities=True),
+    )
+    database = Database(config.storage.sqlite_path)
+    repository = StorageRepository(database)
+    await repository.initialize()
+    snapshot = PublishSnapshot(
+        config=config,
+        version="0.1.0",
+        mode="server",
+        storage_ready=True,
+        health=await _health_report(config, repository),
+        otbr_states=[],
+        matter_servers=[],
+        matter_nodes=[
+            MatterNodeState(node_id=1, server_id="home", available=True),
+        ],
+        thread_networks=[],
+        collector_status={"mdns": {}, "otbr": {}, "matter": {}},
+    )
+    publications = build_publications(snapshot)
+    global_issues = _find_publication(publications, "threadlens_matter_read_probe_issues")
+    assert global_issues.state == "unknown"
+    assert global_issues.attributes["read_probe_diagnostics_available"] is False
+
+
+@pytest.mark.asyncio
 async def test_publisher_does_not_start_when_mqtt_disabled(tmp_path: Path) -> None:
     config = ThreadLensConfig(
         storage={"sqlite_path": str(tmp_path / "mqtt-disabled.db")},
