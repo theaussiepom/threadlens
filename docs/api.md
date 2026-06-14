@@ -10,6 +10,7 @@ No authentication in v1. Trusted LAN only.
 |--------|------|-------------|
 | GET | `/` | HTML index with API links |
 | GET | `/version` | Tool name and version |
+| GET | `/dashboard` | Dashboard payload for Core UI (read-only, HA-agnostic) |
 | GET | `/health` | Structured health report |
 | GET | `/status` | Collector and runtime status |
 | GET | `/capabilities` | Capability summary (report-aligned) |
@@ -42,6 +43,7 @@ No authentication in v1. Trusted LAN only.
 ## Examples
 
 ```bash
+curl http://localhost:8128/api/v1/dashboard
 curl http://localhost:8128/api/v1/health
 curl http://localhost:8128/api/v1/capabilities
 curl http://localhost:8128/api/v1/state
@@ -58,6 +60,12 @@ curl http://localhost:8128/api/v1/report.yaml
 | `subject_type` | string | Optional subject type filter |
 | `subject_id` | string | Optional subject id filter |
 | `event_type` | string | Optional event type filter |
+
+## Dashboard endpoint
+
+`GET /api/v1/dashboard` returns a read-only, bounded JSON payload intended for the future Core-served dashboard UI. It aggregates health, OTBR, Matter, mDNS, TREL, MQTT status, recent events, and report links from Core storage — without Home Assistant device/entity registry enrichment.
+
+During the migration period, the HACS integration may still serve its own dashboard panel; this endpoint is the canonical Core-side data source.
 
 ## Related docs
 

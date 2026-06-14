@@ -28,6 +28,7 @@ from threadlens.report import ReportGenerator
 from threadlens.report.generator import ReportContext
 from threadlens.report.serialize import report_to_dict, report_to_yaml
 from threadlens.report.window import SUPPORTED_WINDOWS
+from threadlens.server.dashboard_context import build_dashboard_response
 from threadlens.server.summary import (
     build_capabilities_payload,
     build_events_payload,
@@ -145,6 +146,10 @@ def create_router(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> APIR
     @router.get("/version")
     async def version() -> dict[str, str]:
         return {"tool": "ThreadLens", "version": __version__}
+
+    @router.get("/dashboard")
+    async def dashboard(request: Request) -> dict[str, object]:
+        return await build_dashboard_response(request, config, active_mode=active_mode)
 
     @router.get("/health")
     async def health(request: Request) -> dict[str, object]:

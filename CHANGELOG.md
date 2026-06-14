@@ -2,6 +2,13 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.0] - Unreleased
+
+### Added
+
+- `GET /api/v1/dashboard` — Core-native dashboard payload aggregation (read-only, Home Assistant agnostic)
+- Dashboard semantics for reconciled OTBR endpoint mismatch, informational foreign TREL, Matter node health classification, incident summary, and relative report URLs
+
 ## [0.1.2] - 2026-06-14
 
 Patch release — mDNS flap health semantics and public-release documentation polish.
