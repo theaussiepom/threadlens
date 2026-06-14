@@ -58,6 +58,22 @@ matter_servers:
     websocket_url: "ws://192.168.1.10:5580/ws"
     variant: "python"
 
+# Optional Matter read probes — disabled by default. See docs/matter-read-probes.md.
+# matter:
+#   probes:
+#     enabled: true
+#     schedule_enabled: true
+#     interval_seconds: 1800
+#     timeout_seconds: 10
+#     max_concurrent: 1
+#     jitter_seconds: 300
+#     ping_enabled: false
+#     attributes:
+#       window_covering:
+#         - "1/258/10"
+#       fallback:
+#         - "0/40/5"
+
 reports:
   redact_secrets: true
 

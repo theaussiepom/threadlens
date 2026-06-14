@@ -73,6 +73,13 @@ matter:
   reconnect_initial_seconds: 5
   reconnect_max_seconds: 60
   request_timeout_seconds: 10
+  # Optional read-only Matter read probes (disabled by default).
+  # probes:
+  #   enabled: true
+  #   schedule_enabled: true
+  #   interval_seconds: 1800
+  #   max_concurrent: 1
+  # See docs/matter-read-probes.md
 
 matter_servers:
   - id: "home"

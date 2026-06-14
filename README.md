@@ -150,7 +150,7 @@ matter_servers:
     variant: "python"
 ```
 
-ThreadLens observes inventory and availability — it does not issue Matter commands.
+ThreadLens observes inventory and availability — it does not issue Matter control commands. Optional [Matter read probes](docs/matter-read-probes.md) (disabled by default) use safe `read_attribute` reads for read reachability; they do not prove commands work. Future [passive command diagnostics](docs/matter-command-diagnostics-future.md) may observe actual command outcomes separately.
 
 ## Configure MQTT / Home Assistant Discovery
 

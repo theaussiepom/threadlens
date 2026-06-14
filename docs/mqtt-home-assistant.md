@@ -66,6 +66,20 @@ Entities include:
 - `sensor.threadlens_foreign_trel_service_count`
 - `sensor.threadlens_matter_node_count`
 - `sensor.threadlens_unavailable_matter_node_count`
+- `sensor.threadlens_matter_read_probe_issues` — count of nodes with read probe issues (when read diagnostics are available)
+
+### Per Matter Node (optional)
+
+Controlled by `mqtt.per_node_entities` (default `true`). Disable to reduce entity count on large fabrics.
+
+When a node exposes read probe diagnostics (`read_probe_diagnostics_available`), per-node entities may also include:
+
+- `binary_sensor` — read probe OK
+- `sensor` — read probe failures 24h
+
+`None` maps to `unknown` (not observed zero). `0` means an observed zero failure count. Names use “read probe” wording — they do not claim command failures.
+
+See [matter-read-probes.md](matter-read-probes.md).
 
 ### Per Thread Network (Extended PAN ID)
 
@@ -80,10 +94,6 @@ Health, role, network name, and reachability sensors per configured OTBR.
 ### Per Matter Server
 
 Connection health, node count, and availability sensors.
-
-### Per Matter Node (optional)
-
-Controlled by `mqtt.per_node_entities` (default `true`). Disable to reduce entity count on large fabrics.
 
 ### Per TREL service (disabled by default)
 

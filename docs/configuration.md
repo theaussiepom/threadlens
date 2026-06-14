@@ -86,6 +86,15 @@ matter:
   reconnect_initial_seconds: 5
   reconnect_max_seconds: 60
   request_timeout_seconds: 10
+  probes:
+    enabled: false
+    manual_enabled: true
+    schedule_enabled: false
+    interval_seconds: 3600
+    timeout_seconds: 10
+    max_concurrent: 1
+    jitter_seconds: 300
+    ping_enabled: false
 
 matter_servers:
   - id: "home"
@@ -94,7 +103,28 @@ matter_servers:
     variant: "python"
 ```
 
-ThreadLens only uses read-only websocket commands (`start_listening`, `get_nodes`, `server_info`).
+ThreadLens uses read-only websocket commands for inventory (`start_listening`, `get_nodes`, `server_info`). Optional **Matter read probes** use `read_attribute` and optionally `ping_node` when `matter.probes.enabled: true`. Read probes are disabled by default and do not prove Home Assistant commands work. See [matter-read-probes.md](matter-read-probes.md).
+
+Example with scheduled probes (start conservative on Thread networks):
+
+```yaml
+matter:
+  probes:
+    enabled: true
+    schedule_enabled: true
+    interval_seconds: 1800
+    timeout_seconds: 10
+    max_concurrent: 1
+    jitter_seconds: 300
+    ping_enabled: false
+    attributes:
+      window_covering:
+        - "1/258/10"
+      fallback:
+        - "0/40/5"
+```
+
+Future passive command diagnostics from Matter Server are documented separately in [matter-command-diagnostics-future.md](matter-command-diagnostics-future.md).
 
 ### `mdns`
 

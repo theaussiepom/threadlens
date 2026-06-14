@@ -26,6 +26,33 @@ ComponentType = Literal["sensor", "binary_sensor"]
 MANUFACTURER = "ThreadLens"
 
 
+def _matter_read_probe_issue(node: MatterNodeState) -> bool:
+    if not node.read_probe_diagnostics_available:
+        return False
+    if node.last_read_probe_limited:
+        return False
+    if node.last_read_probe_ok is False:
+        return True
+    failures = node.read_probe_failures_24h
+    return isinstance(failures, int) and failures >= 1
+
+
+def _count_matter_read_probe_issues(nodes: list[MatterNodeState]) -> int:
+    return sum(1 for node in nodes if _matter_read_probe_issue(node))
+
+
+def _any_read_probe_diagnostics(nodes: list[MatterNodeState]) -> bool:
+    return any(node.read_probe_diagnostics_available for node in nodes)
+
+
+def _read_probe_ok_state(node: MatterNodeState) -> str:
+    if not node.read_probe_diagnostics_available:
+        return "unknown"
+    if node.last_read_probe_limited or node.last_read_probe_ok is None:
+        return "unknown"
+    return "ON" if node.last_read_probe_ok else "OFF"
+
+
 @dataclass(frozen=True)
 class EntityPublication:
     """Discovery config plus current state/attributes for one HA entity."""
@@ -306,6 +333,31 @@ def _environment_entities(
             },
             state=str(snapshot.health.summary.matter_nodes_unavailable),
             attributes=attrs,
+        ),
+        EntityPublication(
+            component="sensor",
+            object_id="threadlens_matter_read_probe_issues",
+            discovery={
+                "name": "Matter Read Probe Issues",
+                "unique_id": "threadlens_matter_read_probe_issues",
+                "state_topic": topics.environment("matter_read_probe_issues"),
+                "json_attributes_topic": topics.environment(
+                    "matter_read_probe_issues", part="attributes"
+                ),
+                **availability,
+                "device": device,
+            },
+            state=(
+                str(_count_matter_read_probe_issues(snapshot.matter_nodes))
+                if _any_read_probe_diagnostics(snapshot.matter_nodes)
+                else "unknown"
+            ),
+            attributes={
+                **attrs,
+                "read_probe_diagnostics_available": _any_read_probe_diagnostics(
+                    snapshot.matter_nodes
+                ),
+            },
         ),
     ]
 
@@ -691,106 +743,165 @@ def _matter_node_entities(
             "subscription_flaps_24h": node.subscription_flaps_24h,
             "case_diagnostics_available": node.case_diagnostics_available,
             "command_diagnostics_available": node.command_diagnostics_available,
+            "read_probe_diagnostics_available": node.read_probe_diagnostics_available,
+            "last_read_probe_ok": node.last_read_probe_ok,
+            "last_read_probe_limited": node.last_read_probe_limited,
+            "read_probe_failures_24h": node.read_probe_failures_24h,
+            "read_probe_successes_24h": node.read_probe_successes_24h,
+            "ping_diagnostics_available": node.ping_diagnostics_available,
+            "last_ping_ok": node.last_ping_ok,
         }
-        publications.extend(
-            [
-                EntityPublication(
-                    component="sensor",
-                    object_id=f"threadlens_matter_node_{node_slug}_health",
-                    discovery={
-                        "name": f"Matter Node {display} Health",
-                        "unique_id": f"threadlens_matter_node_{node_slug}_health",
-                        "state_topic": topics.matter_node(node.server_id, node.node_id, "health"),
-                        "json_attributes_topic": topics.matter_node(
-                            node.server_id, node.node_id, "health", part="attributes"
-                        ),
-                        **availability,
-                        "device": device,
-                    },
-                    state=_health_state_value(health.state if health else HealthState.UNKNOWN),
-                    attributes=attrs,
-                ),
-                EntityPublication(
-                    component="binary_sensor",
-                    object_id=f"threadlens_matter_node_{node_slug}_available",
-                    discovery={
-                        "name": f"Matter Node {display} Available",
-                        "unique_id": f"threadlens_matter_node_{node_slug}_available",
-                        "state_topic": topics.matter_node(
-                            node.server_id, node.node_id, "available"
-                        ),
-                        "json_attributes_topic": topics.matter_node(
-                            node.server_id, node.node_id, "available", part="attributes"
-                        ),
-                        "payload_on": "ON",
-                        "payload_off": "OFF",
-                        **availability,
-                        "device": device,
-                    },
-                    state="ON" if node.available else "OFF",
-                    attributes=attrs,
-                ),
-                EntityPublication(
-                    component="binary_sensor",
-                    object_id=f"threadlens_matter_node_{node_slug}_flapping",
-                    discovery={
-                        "name": f"Matter Node {display} Flapping",
-                        "unique_id": f"threadlens_matter_node_{node_slug}_flapping",
-                        "state_topic": topics.matter_node(node.server_id, node.node_id, "flapping"),
-                        "json_attributes_topic": topics.matter_node(
-                            node.server_id, node.node_id, "flapping", part="attributes"
-                        ),
-                        "payload_on": "ON",
-                        "payload_off": "OFF",
-                        **availability,
-                        "device": device,
-                    },
-                    state="ON" if flapping else "OFF",
-                    attributes=attrs,
-                ),
-                EntityPublication(
-                    component="sensor",
-                    object_id=f"threadlens_matter_node_{node_slug}_availability_flaps_24h",
-                    discovery={
-                        "name": f"Matter Node {display} Availability Flaps 24h",
-                        "unique_id": (f"threadlens_matter_node_{node_slug}_availability_flaps_24h"),
-                        "state_topic": topics.matter_node(
-                            node.server_id, node.node_id, "availability_flaps_24h"
-                        ),
-                        "json_attributes_topic": topics.matter_node(
-                            node.server_id,
-                            node.node_id,
-                            "availability_flaps_24h",
-                            part="attributes",
-                        ),
-                        **availability,
-                        "device": device,
-                    },
-                    state=(
-                        str(node.availability_flaps_24h)
-                        if node.availability_flaps_24h is not None
-                        else "unknown"
+        node_entities: list[EntityPublication] = [
+            EntityPublication(
+                component="sensor",
+                object_id=f"threadlens_matter_node_{node_slug}_health",
+                discovery={
+                    "name": f"Matter Node {display} Health",
+                    "unique_id": f"threadlens_matter_node_{node_slug}_health",
+                    "state_topic": topics.matter_node(node.server_id, node.node_id, "health"),
+                    "json_attributes_topic": topics.matter_node(
+                        node.server_id, node.node_id, "health", part="attributes"
                     ),
-                    attributes=attrs,
+                    **availability,
+                    "device": device,
+                },
+                state=_health_state_value(health.state if health else HealthState.UNKNOWN),
+                attributes=attrs,
+            ),
+            EntityPublication(
+                component="binary_sensor",
+                object_id=f"threadlens_matter_node_{node_slug}_available",
+                discovery={
+                    "name": f"Matter Node {display} Available",
+                    "unique_id": f"threadlens_matter_node_{node_slug}_available",
+                    "state_topic": topics.matter_node(node.server_id, node.node_id, "available"),
+                    "json_attributes_topic": topics.matter_node(
+                        node.server_id, node.node_id, "available", part="attributes"
+                    ),
+                    "payload_on": "ON",
+                    "payload_off": "OFF",
+                    **availability,
+                    "device": device,
+                },
+                state="ON" if node.available else "OFF",
+                attributes=attrs,
+            ),
+            EntityPublication(
+                component="binary_sensor",
+                object_id=f"threadlens_matter_node_{node_slug}_flapping",
+                discovery={
+                    "name": f"Matter Node {display} Flapping",
+                    "unique_id": f"threadlens_matter_node_{node_slug}_flapping",
+                    "state_topic": topics.matter_node(node.server_id, node.node_id, "flapping"),
+                    "json_attributes_topic": topics.matter_node(
+                        node.server_id, node.node_id, "flapping", part="attributes"
+                    ),
+                    "payload_on": "ON",
+                    "payload_off": "OFF",
+                    **availability,
+                    "device": device,
+                },
+                state="ON" if flapping else "OFF",
+                attributes=attrs,
+            ),
+            EntityPublication(
+                component="sensor",
+                object_id=f"threadlens_matter_node_{node_slug}_availability_flaps_24h",
+                discovery={
+                    "name": f"Matter Node {display} Availability Flaps 24h",
+                    "unique_id": (f"threadlens_matter_node_{node_slug}_availability_flaps_24h"),
+                    "state_topic": topics.matter_node(
+                        node.server_id, node.node_id, "availability_flaps_24h"
+                    ),
+                    "json_attributes_topic": topics.matter_node(
+                        node.server_id,
+                        node.node_id,
+                        "availability_flaps_24h",
+                        part="attributes",
+                    ),
+                    **availability,
+                    "device": device,
+                },
+                state=(
+                    str(node.availability_flaps_24h)
+                    if node.availability_flaps_24h is not None
+                    else "unknown"
                 ),
-                EntityPublication(
-                    component="sensor",
-                    object_id=f"threadlens_matter_node_{node_slug}_last_seen",
-                    discovery={
-                        "name": f"Matter Node {display} Last Seen",
-                        "unique_id": f"threadlens_matter_node_{node_slug}_last_seen",
-                        "state_topic": topics.matter_node(
-                            node.server_id, node.node_id, "last_seen"
+                attributes=attrs,
+            ),
+            EntityPublication(
+                component="sensor",
+                object_id=f"threadlens_matter_node_{node_slug}_last_seen",
+                discovery={
+                    "name": f"Matter Node {display} Last Seen",
+                    "unique_id": f"threadlens_matter_node_{node_slug}_last_seen",
+                    "state_topic": topics.matter_node(node.server_id, node.node_id, "last_seen"),
+                    "json_attributes_topic": topics.matter_node(
+                        node.server_id, node.node_id, "last_seen", part="attributes"
+                    ),
+                    **availability,
+                    "device": device,
+                },
+                state=_iso(node.last_seen) or "unknown",
+                attributes=attrs,
+            ),
+        ]
+        if node.read_probe_diagnostics_available:
+            node_entities.extend(
+                [
+                    EntityPublication(
+                        component="binary_sensor",
+                        object_id=f"threadlens_matter_node_{node_slug}_read_probe_ok",
+                        discovery={
+                            "name": f"Matter Node {display} Read Probe OK",
+                            "unique_id": (f"threadlens_matter_node_{node_slug}_read_probe_ok"),
+                            "state_topic": topics.matter_node(
+                                node.server_id, node.node_id, "read_probe_ok"
+                            ),
+                            "json_attributes_topic": topics.matter_node(
+                                node.server_id,
+                                node.node_id,
+                                "read_probe_ok",
+                                part="attributes",
+                            ),
+                            "payload_on": "ON",
+                            "payload_off": "OFF",
+                            **availability,
+                            "device": device,
+                        },
+                        state=_read_probe_ok_state(node),
+                        attributes=attrs,
+                    ),
+                    EntityPublication(
+                        component="sensor",
+                        object_id=f"threadlens_matter_node_{node_slug}_read_probe_failures_24h",
+                        discovery={
+                            "name": f"Matter Node {display} Read Probe Failures 24h",
+                            "unique_id": (
+                                f"threadlens_matter_node_{node_slug}_read_probe_failures_24h"
+                            ),
+                            "state_topic": topics.matter_node(
+                                node.server_id,
+                                node.node_id,
+                                "read_probe_failures_24h",
+                            ),
+                            "json_attributes_topic": topics.matter_node(
+                                node.server_id,
+                                node.node_id,
+                                "read_probe_failures_24h",
+                                part="attributes",
+                            ),
+                            **availability,
+                            "device": device,
+                        },
+                        state=(
+                            str(node.read_probe_failures_24h)
+                            if node.read_probe_failures_24h is not None
+                            else "unknown"
                         ),
-                        "json_attributes_topic": topics.matter_node(
-                            node.server_id, node.node_id, "last_seen", part="attributes"
-                        ),
-                        **availability,
-                        "device": device,
-                    },
-                    state=_iso(node.last_seen) or "unknown",
-                    attributes=attrs,
-                ),
-            ]
-        )
+                        attributes=attrs,
+                    ),
+                ]
+            )
+        publications.extend(node_entities)
     return publications
