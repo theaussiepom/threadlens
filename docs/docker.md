@@ -121,10 +121,14 @@ See the add-on `DOCS.md` for installation and configuration on HAOS.
 
 | File | Purpose |
 |------|---------|
-| `docker-compose.host-network.example.yml` | **Recommended** published-image deployment on Linux |
-| `docker-compose.study-both.example.yml` | Both-mode example with sample config |
+| `deploy/docker/docker-compose.pironman.example.yaml` | **Pironman (Study Pi)** host-network deployment |
+| `deploy/traefik/threadlens-router.yaml.example` | **Beast Traefik** `conf.d` router → Pironman |
+| `docker-compose.host-network.example.yml` | Generic Linux host-network deployment |
+| `docker-compose.study-both.example.yml` | Study Pi both-mode example (same topology as Pironman) |
 | `docker-compose.lounge-agent.example.yml` | Agent-only example |
 | `docker-compose.example.yml` | Local bridge-mode development build |
+
+See [deploy/docker/README.md](../deploy/docker/README.md) for the Pironman + Beast Traefik setup.
 
 ## Maintainer live-test runbook
 

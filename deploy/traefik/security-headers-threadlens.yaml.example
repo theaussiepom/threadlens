@@ -1,0 +1,42 @@
+# Traefik dynamic middleware — ThreadLens Core UI + optional HA iframe embedding.
+#
+# Copy to Beast Traefik file provider directory, e.g.:
+#   /mnt/nas/docker/network/traefik/conf.d/middlewares/security-headers-threadlens.yaml
+#
+# Referenced from deploy/traefik/threadlens-router.yaml.example:
+#   securityHeadersThreadLens@file
+#
+# Replace the Home Assistant origin below with your real URL, for example:
+#   https://hass.theaussiepom.me
+#
+# Do not use securityHeadersUnsafe@file for ThreadLens — its CSP blocks the
+# bundled React dashboard styling.
+
+http:
+  middlewares:
+    securityHeadersThreadLens:
+      headers:
+        frameDeny: false
+        customresponseheaders:
+          Server: '{{env "DOMAIN"}}'
+          X-Powered-By: '{{env "DOMAIN"}}'
+          X-Frame-Options: ""
+        accesscontrolallowmethods: GET,POST
+        accesscontrolmaxage: 100
+        accesscontrolalloworiginlist: "*"
+        addvaryheader: true
+        contentSecurityPolicy: >-
+          default-src 'self';
+          script-src 'self' 'unsafe-inline';
+          style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+          font-src 'self' https://fonts.gstatic.com data:;
+          img-src 'self' data:;
+          connect-src 'self';
+          frame-ancestors 'self' https://hass.theaussiepom.me;
+        contenttypenosniff: true
+        referrerpolicy: origin-when-cross-origin
+        sslredirect: true
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true

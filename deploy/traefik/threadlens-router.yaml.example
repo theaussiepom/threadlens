@@ -1,0 +1,44 @@
+# Traefik file provider — ThreadLens on Pironman via Beast reverse proxy.
+#
+# ThreadLens runs on Pironman with host networking (mDNS/TREL). Beast Traefik
+# routes HTTPS to the Pironman LAN address via the file provider.
+#
+# Copy to Beast Traefik conf.d, e.g.:
+#   /mnt/nas/docker/network/traefik/conf.d/routers/threadlens.yaml
+#
+# Also copy:
+#   deploy/traefik/security-headers-threadlens.yaml.example
+# to:
+#   /mnt/nas/docker/network/traefik/conf.d/middlewares/security-headers-threadlens.yaml
+#
+# Prerequisites:
+# 1. DNS: threadlens.${DOMAIN} → Beast (Cloudflare / Pi-hole).
+# 2. ThreadLens on Pironman with host networking, listening on :8128.
+# 3. Beast Traefik can reach Pironman on the LAN.
+#
+# After deploy, optional HACS HTTPS / iframe Core URL:
+#   https://threadlens.theaussiepom.me
+#
+# Default HACS value (no reverse proxy required):
+#   http://192.168.100.4:8128
+
+http:
+  routers:
+    threadlens:
+      entryPoints:
+        - https
+      service: threadlens
+      rule: Host(`threadlens.{{env "DOMAIN"}}`)
+      tls:
+        certresolver: cloudflare
+      middlewares:
+        - local@file
+        - authentik@file
+        - securityHeadersThreadLens@file
+
+  services:
+    threadlens:
+      loadBalancer:
+        servers:
+          - url: "http://{{env "HOME_NETWORK_PREFIX"}}.4:8128"
+        passHostHeader: true

@@ -1,0 +1,37 @@
+# ThreadLens on Pironman (Study Pi) — host networking for mDNS/TREL.
+#
+# ThreadLens needs host networking on Linux for reliable mDNS/TREL observation.
+# Run on Pironman, not Beast. Beast Traefik routes HTTPS to this host — see:
+#   deploy/traefik/threadlens-router.yaml.example
+#
+# Before starting on Pironman:
+# 1. Copy deploy/docker/config.pironman.example.yaml to a local path, e.g.:
+#      ~/threadlens/config/config.yaml
+# 2. Set MQTT broker host/credentials in your local copy only (never commit secrets).
+# 3. mkdir -p ~/threadlens/data
+# 4. docker pull ghcr.io/theaussiepom/threadlens:0.2.0
+#
+# Usage on Pironman:
+#   docker compose -f deploy/docker/docker-compose.pironman.example.yaml up -d
+#
+# LAN API (direct):
+#   http://pironman:8128
+#   http://192.168.100.4:8128
+#
+# HTTPS via Beast Traefik (after conf.d router is deployed):
+#   https://threadlens.${DOMAIN}
+
+services:
+  threadlens:
+    image: ghcr.io/theaussiepom/threadlens:0.2.0
+    container_name: threadlens
+    hostname: threadlens
+    restart: unless-stopped
+    network_mode: host
+    command: ["--mode", "both"]
+    environment:
+      TZ: ${TZ:-Australia/Sydney}
+      THREADLENS_CONFIG_PATH: /config/config.yaml
+    volumes:
+      - ${THREADLENS_CONFIG_DIR:-./config}/config.yaml:/config/config.yaml:ro
+      - ${THREADLENS_DATA_DIR:-./data}:/data

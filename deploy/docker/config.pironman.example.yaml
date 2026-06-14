@@ -1,0 +1,90 @@
+# ThreadLens Pironman (Study Pi) example config — both mode, host networking.
+#
+# Copy to your host and mount at /config/config.yaml.
+# Set MQTT broker host and credentials in your local copy only — never commit secrets.
+#
+# Typical Ben Home topology (adjust for your LAN):
+#   - Pironman (Study Pi): ThreadLens both-mode collector + local OTBR + Matter Server
+#   - Lounge Pi: remote agent only (optional second compose file)
+#   - Beast: MQTT broker at 192.168.100.5:1883
+#
+# On Pironman with host networking, local collectors use 127.0.0.1 for co-located services.
+
+site:
+  name: "My ThreadLens Site"
+
+mode: both
+
+server:
+  host: "0.0.0.0"
+  port: 8128
+
+agent:
+  host: "0.0.0.0"
+  port: 8129
+
+storage:
+  sqlite_path: "/data/threadlens.db"
+  event_retention_days: 30
+
+flapping:
+  debounce_seconds: 30
+
+otbr:
+  poll_interval_seconds: 60
+  request_timeout_seconds: 5
+  allow_read_only_actions: false
+  use_legacy_node_fallback: true
+
+mqtt:
+  enabled: true
+  # Beast Mosquitto on the LAN, e.g. 192.168.100.5 or homeassistant.local
+  host: "192.168.1.50"
+  port: 1883
+  username: null
+  password: null
+  discovery_prefix: "homeassistant"
+  topic_prefix: "threadlens"
+  retain_discovery: true
+  retain_state: true
+  publish_interval_seconds: 30
+  per_trel_service_entities: false
+  per_node_entities: true
+
+mdns:
+  enabled: true
+  services:
+    - "_trel._udp.local."
+    - "_meshcop._udp.local."
+    - "_matter._tcp.local."
+    - "_matterc._udp.local."
+
+otbrs:
+  - id: "study"
+    name: "Study OTBR"
+    # Local OTBR on Pironman (host networking)
+    rest_url: "http://127.0.0.1:8081"
+    agent_url: "http://127.0.0.1:8129"
+  - id: "lounge"
+    name: "Lounge OTBR"
+    # Remote OTBR on another Pi, e.g. 192.168.1.11
+    rest_url: "http://192.168.1.11:8081"
+    agent_url: "http://192.168.1.11:8129"
+
+matter:
+  reconnect_initial_seconds: 5
+  reconnect_max_seconds: 60
+  request_timeout_seconds: 10
+
+matter_servers:
+  - id: "study_matter"
+    name: "Study Matter Server"
+    # Matter Server co-located on Pironman (host networking)
+    websocket_url: "ws://127.0.0.1:5580/ws"
+    variant: "python"
+
+reports:
+  redact_secrets: true
+
+homeassistant:
+  mqtt_discovery_enabled: true
