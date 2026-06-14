@@ -1,8 +1,18 @@
 # ThreadLens
 
-Read-only observability for Thread, OpenThread Border Routers (OTBR), TREL, mDNS/DNS-SD, Matter Server, and Matter-over-Thread node health.
+**Open source** (MIT License) — read-only observability for Thread, OpenThread Border Routers (OTBR), TREL, mDNS/DNS-SD, Matter Server, and Matter-over-Thread node health.
+
+ThreadLens is **early / pre-1.0 software**. Pin a specific image tag (for example `ghcr.io/theaussiepom/threadlens:0.1.1`) for deployments rather than floating `latest`.
 
 ThreadLens is designed for Home Assistant environments but is not hard-coupled to Home Assistant Core.
+
+## Open source
+
+- Licensed under the [MIT License](LICENSE)
+- Read-only observability — does **not** commission devices or mutate Thread, Matter, or OTBR state
+- Does **not** use SSH, Docker socket access, or log scraping in normal operation
+- Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security reports — see [SECURITY.md](SECURITY.md)
 
 ## What ThreadLens is
 
@@ -41,6 +51,15 @@ ThreadLens is designed for Home Assistant environments but is not hard-coupled t
 Unavailable metrics are reported as `null` or explicit capability flags — not inferred as zero.
 
 ## Quick start (Docker Compose)
+
+Pull the published image (recommended):
+
+```bash
+docker pull ghcr.io/theaussiepom/threadlens:0.1.1
+docker compose -f docker-compose.study-both.example.yml up -d
+```
+
+Or build locally for development:
 
 ```bash
 docker build -t ghcr.io/theaussiepom/threadlens:local .

@@ -1,0 +1,30 @@
+name: Diagnostic report
+description: Share a redacted ThreadLens health/report snapshot for troubleshooting
+title: "[Diagnostics]: "
+labels: ["diagnostics"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste secrets.** Use `reports.redact_secrets: true` and remove MQTT credentials before sharing `/api/v1/report.yaml` or MQTT payloads.
+  - type: input
+    id: version
+    attributes:
+      label: ThreadLens version
+    validations:
+      required: true
+  - type: textarea
+    id: health
+    attributes:
+      label: Health summary
+      description: Output of `/api/v1/health` (overall, otbrs, mdns, trel) — no secrets
+  - type: textarea
+    id: report
+    attributes:
+      label: Redacted report excerpt
+      description: Relevant sections from `/api/v1/report.yaml` with secrets removed
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      placeholder: Expected vs actual behaviour, recent changes, networking notes
