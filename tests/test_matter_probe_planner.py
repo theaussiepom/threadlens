@@ -19,7 +19,7 @@ def _node(**overrides) -> MatterNodeState:
 
 
 def test_conservative_mode_uses_generic_candidates_only() -> None:
-    config = MatterProbeConfig(enabled=True, mode=ProbeMode.CONSERVATIVE)
+    config = MatterProbeConfig(mode=ProbeMode.CONSERVATIVE)
     node = _node(product="Living Blind")
     planner = MatterProbePlanner()
     candidates = planner.plan(
@@ -34,7 +34,7 @@ def test_conservative_mode_uses_generic_candidates_only() -> None:
 
 
 def test_standard_mode_adds_window_covering_from_endpoint_data() -> None:
-    config = MatterProbeConfig(enabled=True, mode=ProbeMode.STANDARD)
+    config = MatterProbeConfig(mode=ProbeMode.STANDARD)
     node = _node()
     planner = MatterProbePlanner()
     candidates = planner.plan(
@@ -52,7 +52,6 @@ def test_standard_mode_adds_window_covering_from_endpoint_data() -> None:
 
 def test_per_node_override_is_first_candidate() -> None:
     config = MatterProbeConfig(
-        enabled=True,
         mode=ProbeMode.CONSERVATIVE,
         advanced=MatterProbeAdvancedConfig(
             per_node={"24": MatterProbePerNodeOverride(preferred=["0/40/4"])}
@@ -64,7 +63,7 @@ def test_per_node_override_is_first_candidate() -> None:
 
 
 def test_last_successful_probe_is_reused_before_generic_fallback() -> None:
-    config = MatterProbeConfig(enabled=True, mode=ProbeMode.CONSERVATIVE)
+    config = MatterProbeConfig(mode=ProbeMode.CONSERVATIVE)
     candidates = MatterProbePlanner().plan(
         _node(
             last_successful_probe_kind="basic_information",
@@ -78,7 +77,7 @@ def test_last_successful_probe_is_reused_before_generic_fallback() -> None:
 
 
 def test_unsupported_paths_are_skipped() -> None:
-    config = MatterProbeConfig(enabled=True, mode=ProbeMode.CONSERVATIVE)
+    config = MatterProbeConfig(mode=ProbeMode.CONSERVATIVE)
     candidates = MatterProbePlanner().plan(
         _node(last_unsupported_probe_paths=["1/258/10"]),
         attribute_keys=frozenset({"1/258/10", "0/40/2"}),
@@ -89,7 +88,6 @@ def test_unsupported_paths_are_skipped() -> None:
 
 def test_per_node_disabled_returns_no_candidates() -> None:
     config = MatterProbeConfig(
-        enabled=True,
         mode=ProbeMode.STANDARD,
         advanced=MatterProbeAdvancedConfig(
             per_node={"24": MatterProbePerNodeOverride(disabled=True)}
@@ -99,18 +97,18 @@ def test_per_node_disabled_returns_no_candidates() -> None:
     assert candidates == []
 
 
-def test_legacy_top_level_attributes_remain_compatible() -> None:
-    config = MatterProbeConfig.model_validate(
-        {
-            "enabled": True,
-            "attributes": {
-                "fallback": ["0/40/5"],
-                "window_covering": ["3/258/10"],
-            },
-        }
-    )
-    assert config.attributes.fallback == ["0/40/5"]
-    assert config.attributes.window_covering == ["3/258/10"]
+def test_legacy_top_level_fields_are_rejected() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        MatterProbeConfig.model_validate(
+            {
+                "mode": "conservative",
+                "interval_seconds": 1800,
+                "attributes": {"fallback": ["0/40/5"]},
+            }
+        )
 
 
 def test_infer_device_types_from_cluster_keys() -> None:

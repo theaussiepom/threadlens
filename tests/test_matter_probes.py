@@ -43,8 +43,7 @@ def _probe_config(**overrides: Any) -> MatterPollingConfig:
     probe_overrides = {
         key: value for key, value in overrides.items() if key in MatterProbeConfig.model_fields
     }
-    if "enabled" not in probe_overrides and "mode" not in probe_overrides:
-        probe_overrides["enabled"] = True
+    if "mode" not in probe_overrides:
         probe_overrides["mode"] = ProbeMode.CONSERVATIVE
     if "advanced" not in probe_overrides:
         probe_overrides["advanced"] = MatterProbeAdvancedConfig(
@@ -189,7 +188,6 @@ async def test_read_probe_failure_updates_node_state(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_read_probe_timeout_records_timed_out_event(tmp_path: Path) -> None:
     probes = MatterProbeConfig(
-        enabled=True,
         mode=ProbeMode.CONSERVATIVE,
         advanced=MatterProbeAdvancedConfig(
             timeout_seconds=0.05,
@@ -251,7 +249,6 @@ async def test_unavailable_node_records_skipped(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_ping_success_and_failure_update_ping_fields(tmp_path: Path) -> None:
     probes = MatterProbeConfig(
-        enabled=True,
         mode=ProbeMode.CONSERVATIVE,
         advanced=MatterProbeAdvancedConfig(
             ping_enabled=True,
@@ -307,7 +304,6 @@ async def test_24h_counters_distinguish_none_vs_zero(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_window_covering_attribute_path_selection(tmp_path: Path) -> None:
     probes = MatterProbeConfig(
-        enabled=True,
         mode=ProbeMode.STANDARD,
         advanced=MatterProbeAdvancedConfig(
             attributes=MatterProbeAttributesConfig(fallback=["0/40/5"])
@@ -329,7 +325,6 @@ async def test_window_covering_attribute_path_selection(tmp_path: Path) -> None:
 
 def test_resolve_read_probe_attribute_path_uses_planner_fallback() -> None:
     config = MatterProbeConfig(
-        enabled=True,
         mode=ProbeMode.CONSERVATIVE,
         advanced=MatterProbeAdvancedConfig(
             attributes=MatterProbeAttributesConfig(fallback=["0/40/5"])
@@ -400,7 +395,7 @@ async def test_probe_fields_preserved_on_passive_node_update(tmp_path: Path) -> 
 
 def test_matter_probe_config_defaults() -> None:
     config = MatterProbeConfig()
-    assert config.enabled is False
+    assert config.mode == ProbeMode.OFF
     assert config.schedule_enabled is False
     assert config.manual_enabled is True
     assert config.timeout_seconds == 10.0

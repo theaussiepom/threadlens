@@ -11,6 +11,7 @@ from threadlens.config import (
     FlappingConfig,
     HomeAssistantConfig,
     MatterServerVariant,
+    ProbeMode,
     RuntimeMode,
     ThreadLensConfig,
     load_config,
@@ -54,7 +55,7 @@ def test_load_config_with_defaults() -> None:
 def test_matter_probe_config_defaults() -> None:
     config = ThreadLensConfig()
     probes = config.matter.probes
-    assert probes.enabled is False
+    assert probes.mode == ProbeMode.OFF
     assert probes.schedule_enabled is False
     assert probes.manual_enabled is True
     assert probes.timeout_seconds == 10.0

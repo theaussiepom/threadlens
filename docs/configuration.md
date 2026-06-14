@@ -87,14 +87,9 @@ matter:
   reconnect_max_seconds: 60
   request_timeout_seconds: 10
   probes:
-    enabled: false
+    mode: off
     manual_enabled: true
     schedule_enabled: false
-    interval_seconds: 3600
-    timeout_seconds: 10
-    max_concurrent: 1
-    jitter_seconds: 300
-    ping_enabled: false
 
 matter_servers:
   - id: "home"
@@ -110,21 +105,19 @@ Most users only need a mode:
 ```yaml
 matter:
   probes:
-    enabled: true
     mode: conservative
     schedule_enabled: true
 ```
 
 Supported modes: `off`, `conservative`, `standard`, `diagnostic`.
 
-Advanced timing, ping, attribute overrides, and per-node settings live under `matter.probes.advanced`. Legacy top-level `interval_seconds`, `attributes`, and related fields remain compatible.
+Timing, ping, attribute overrides, and per-node settings live under `matter.probes.advanced`.
 
 Example with advanced overrides:
 
 ```yaml
 matter:
   probes:
-    enabled: true
     mode: standard
     schedule_enabled: true
     advanced:

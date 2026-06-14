@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CONFIG_PATH = Path("/config/config.yaml")
@@ -132,47 +132,20 @@ class MatterProbeAdvancedConfig(BaseModel):
 class MatterProbeConfig(BaseModel):
     """User-facing and advanced Matter read reachability probe settings."""
 
-    enabled: bool = False
-    mode: ProbeMode | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    mode: ProbeMode = ProbeMode.OFF
     manual_enabled: bool = True
     schedule_enabled: bool = False
     advanced: MatterProbeAdvancedConfig = Field(default_factory=MatterProbeAdvancedConfig)
 
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_legacy_fields(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-        advanced = dict(data.get("advanced") or {})
-        legacy_map = {
-            "interval_seconds": "interval_seconds",
-            "timeout_seconds": "timeout_seconds",
-            "max_concurrent": "max_concurrent",
-            "jitter_seconds": "jitter_seconds",
-            "ping_enabled": "ping_enabled",
-        }
-        for legacy_key, advanced_key in legacy_map.items():
-            if legacy_key in data and data[legacy_key] is not None:
-                advanced[advanced_key] = data[legacy_key]
-        if "attributes" in data and isinstance(data["attributes"], dict):
-            attrs = dict(advanced.get("attributes") or {})
-            attrs.update(data["attributes"])
-            advanced["attributes"] = attrs
-        if advanced:
-            data["advanced"] = advanced
-        return data
-
     @property
     def effective_mode(self) -> ProbeMode:
-        if self.mode is not None:
-            return self.mode
-        if not self.enabled:
-            return ProbeMode.OFF
-        return ProbeMode.CONSERVATIVE
+        return self.mode
 
     @property
     def probes_active(self) -> bool:
-        return self.effective_mode != ProbeMode.OFF
+        return self.mode != ProbeMode.OFF
 
     @property
     def interval_seconds(self) -> int:

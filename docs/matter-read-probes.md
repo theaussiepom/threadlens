@@ -22,7 +22,6 @@ Normal users configure intent with a mode:
 ```yaml
 matter:
   probes:
-    enabled: true
     mode: conservative
     schedule_enabled: true
 ```
@@ -35,8 +34,6 @@ Supported modes:
 | `conservative` | Infrequent generic/root Matter read checks only. Best default for Thread networks |
 | `standard` | Generic/root checks plus safe device-type checks when ThreadLens can confidently infer them |
 | `diagnostic` | More frequent read checks and more detail, still read-only |
-
-`enabled: false` remains supported for backward compatibility and is treated as `off` when `mode` is not set.
 
 ### Mode timing defaults
 
@@ -57,7 +54,6 @@ Raw Matter attribute paths are advanced-only. Most installs do not need them.
 ```yaml
 matter:
   probes:
-    enabled: true
     mode: standard
     advanced:
       interval_seconds: 1800
@@ -75,11 +71,9 @@ matter:
         "24":
           preferred:
             - "0/40/2"
-        "29":
-          disabled: true
 ```
 
-Legacy top-level fields such as `interval_seconds` and `attributes` are still accepted and merged into `advanced` for backward compatibility.
+Top-level tuning keys such as `interval_seconds` or `attributes` are not accepted — use `advanced` only.
 
 ### How paths are chosen
 
