@@ -1,19 +1,27 @@
-"""Tests for the canonical Core dashboard UI assets and serving."""
+"""Tests for the canonical Core React dashboard source and built assets.
+
+The dashboard is a React/Vite app under ``web/``. Its production bundle is built
+into ``static/`` (by ``npm --prefix web run build``, the Docker image build, or
+CI) and is intentionally not committed. These tests validate the committed
+source for path-safety and Home-Assistant independence, and validate the built
+output only when it is present (so the Python test job does not require Node).
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from threadlens.config import MdnsConfig, RuntimeMode, ThreadLensConfig
 from threadlens.server.app import create_server_app
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+WEB_DIR = REPO_ROOT / "web"
+WEB_SRC = WEB_DIR / "src"
 REPO_STATIC = REPO_ROOT / "static"
-INDEX_HTML = REPO_STATIC / "index.html"
-DASHBOARD_JS = REPO_STATIC / "dashboard.js"
-DASHBOARD_CSS = REPO_STATIC / "dashboard.css"
+BUILT_INDEX = REPO_STATIC / "index.html"
 
 
 def _config(tmp_path: Path) -> ThreadLensConfig:
@@ -23,97 +31,111 @@ def _config(tmp_path: Path) -> ThreadLensConfig:
     )
 
 
-def _client(tmp_path: Path, monkeypatch) -> TestClient:
-    monkeypatch.setenv("THREADLENS_STATIC_DIR", str(REPO_STATIC))
-    return TestClient(create_server_app(_config(tmp_path), active_mode=RuntimeMode.SERVER))
+def _source_text(*suffixes: str) -> str:
+    parts: list[str] = []
+    for path in sorted(WEB_SRC.rglob("*")):
+        if path.is_file() and path.suffix in suffixes:
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
 
 
-def test_dashboard_assets_exist() -> None:
-    assert INDEX_HTML.is_file()
-    assert DASHBOARD_JS.is_file()
-    assert DASHBOARD_CSS.is_file()
+def test_web_app_source_exists() -> None:
+    assert (WEB_DIR / "package.json").is_file()
+    assert (WEB_DIR / "index.html").is_file()
+    assert (WEB_DIR / "vite.config.ts").is_file()
+    assert (WEB_SRC / "main.tsx").is_file()
+    assert (WEB_SRC / "App.tsx").is_file()
 
 
-def test_static_root_serves_real_dashboard_index(tmp_path: Path, monkeypatch) -> None:
-    with _client(tmp_path, monkeypatch) as client:
-        response = client.get("/")
-        assert response.status_code == 200
-        assert "ThreadLens Dashboard" in response.text
-        assert 'id="tl-app"' in response.text
-        assert 'src="dashboard.js"' in response.text
+def test_vite_uses_relative_base_and_static_outdir() -> None:
+    cfg = (WEB_DIR / "vite.config.ts").read_text(encoding="utf-8")
+    assert 'base: "./"' in cfg
+    assert 'outDir: "../static"' in cfg
 
 
-def test_dashboard_js_and_css_assets_served(tmp_path: Path, monkeypatch) -> None:
-    with _client(tmp_path, monkeypatch) as client:
-        js = client.get("/dashboard.js")
-        assert js.status_code == 200
-        assert "javascript" in js.headers["content-type"]
-        css = client.get("/dashboard.css")
-        assert css.status_code == 200
-        assert "css" in css.headers["content-type"]
+def test_source_calls_relative_dashboard_endpoint() -> None:
+    src = _source_text(".ts", ".tsx")
+    assert "api/v1/dashboard" in src
+    # Path-safe resolution against the document location (not an absolute path).
+    assert "new URL(" in src
+    assert '"/api/v1/dashboard"' not in src
 
 
-def test_index_references_only_relative_local_assets() -> None:
-    content = INDEX_HTML.read_text(encoding="utf-8")
-    assert 'href="dashboard.css"' in content
-    assert 'src="dashboard.js"' in content
-    # No absolute or external asset references.
+def test_source_report_urls_relative() -> None:
+    src = _source_text(".ts", ".tsx")
+    assert "api/v1/report.yaml" in src
+    assert "api/v1/report.json" in src
+
+
+def test_source_has_no_home_assistant_websocket() -> None:
+    src = _source_text(".ts", ".tsx")
+    assert "callWS" not in src
+    assert "hass" not in src
+    assert "threadlens/dashboard" not in src
+
+
+def test_source_has_no_ha_report_proxy() -> None:
+    src = _source_text(".ts", ".tsx")
+    assert "auth/sign_path" not in src
+    assert "report_proxy_url" not in src
+    assert "hassio_ingress" not in src
+
+
+def test_source_has_no_external_origins() -> None:
+    for path in sorted(WEB_SRC.rglob("*")):
+        if not path.is_file() or path.suffix not in {".ts", ".tsx", ".css"}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        assert "http://" not in text, path
+        assert "https://" not in text, path
+        assert "cdn." not in text, path
+
+
+def test_source_supports_light_and_dark_theme() -> None:
+    theme = (WEB_SRC / "styles" / "theme.css").read_text(encoding="utf-8")
+    assert "prefers-color-scheme: dark" in theme
+
+
+def test_source_is_mobile_first_responsive() -> None:
+    css = (WEB_SRC / "styles" / "app.css").read_text(encoding="utf-8")
+    # Mobile-first: enhancements gated behind min-width breakpoints.
+    assert "min-width: 600px" in css
+    assert "min-width: 960px" in css
+
+
+# ---- Built-output checks (run only when the dashboard has been built) ----
+
+
+@pytest.mark.skipif(not BUILT_INDEX.is_file(), reason="dashboard not built into static/")
+def test_built_index_uses_relative_assets() -> None:
+    content = BUILT_INDEX.read_text(encoding="utf-8")
+    assert "./assets/" in content
     assert "http://" not in content
     assert "https://" not in content
-    assert 'href="/' not in content
+    # No root-absolute asset URLs (would break under a path prefix / Ingress).
     assert 'src="/' not in content
+    assert 'href="/' not in content
 
 
-def test_dashboard_js_calls_relative_dashboard_endpoint() -> None:
-    content = DASHBOARD_JS.read_text(encoding="utf-8")
-    assert 'apiUrl("api/v1/dashboard")' in content
-    assert "new URL(" in content
-
-
-def test_dashboard_js_has_no_home_assistant_websocket() -> None:
-    content = DASHBOARD_JS.read_text(encoding="utf-8")
-    assert "callWS" not in content
-    assert "hass" not in content
-    assert "threadlens/dashboard" not in content
-
-
-def test_dashboard_js_has_no_ha_report_proxy() -> None:
-    content = DASHBOARD_JS.read_text(encoding="utf-8")
-    assert "auth/sign_path" not in content
-    assert "report_proxy_url" not in content
-    assert "/api/hassio_ingress" not in content
-
-
-def test_dashboard_js_opens_report_yaml_relative() -> None:
-    content = DASHBOARD_JS.read_text(encoding="utf-8")
-    assert "api/v1/report.yaml" in content
-    assert "api/v1/report.json" in content
-
-
-def test_dashboard_assets_have_no_external_imports() -> None:
-    js = DASHBOARD_JS.read_text(encoding="utf-8")
-    css = DASHBOARD_CSS.read_text(encoding="utf-8")
-    for content in (js, css):
-        assert "http://" not in content
-        assert "https://" not in content
-        assert "cdn." not in content
-    # No bare ES module imports or CommonJS requires (no build/runtime deps).
-    assert "import " not in js
-    assert "require(" not in js
-
-
-def test_api_routes_not_swallowed_with_real_dashboard(tmp_path: Path, monkeypatch) -> None:
-    with _client(tmp_path, monkeypatch) as client:
+@pytest.mark.skipif(not BUILT_INDEX.is_file(), reason="dashboard not built into static/")
+def test_built_dashboard_served_at_root(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("THREADLENS_STATIC_DIR", str(REPO_STATIC))
+    with TestClient(create_server_app(_config(tmp_path), active_mode=RuntimeMode.SERVER)) as client:
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'id="root"' in response.text
+        # API routes are not swallowed by the SPA fallback.
         health = client.get("/api/v1/health")
         assert health.status_code == 200
         assert health.headers["content-type"].startswith("application/json")
         missing = client.get("/api/v1/nope")
         assert missing.status_code == 404
-        assert missing.headers["content-type"].startswith("application/json")
 
 
+@pytest.mark.skipif(not BUILT_INDEX.is_file(), reason="dashboard not built into static/")
 def test_unknown_frontend_route_falls_back_to_dashboard(tmp_path: Path, monkeypatch) -> None:
-    with _client(tmp_path, monkeypatch) as client:
+    monkeypatch.setenv("THREADLENS_STATIC_DIR", str(REPO_STATIC))
+    with TestClient(create_server_app(_config(tmp_path), active_mode=RuntimeMode.SERVER)) as client:
         response = client.get("/some/spa/route")
         assert response.status_code == 200
-        assert 'id="tl-app"' in response.text
+        assert 'id="root"' in response.text

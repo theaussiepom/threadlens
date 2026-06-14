@@ -67,15 +67,28 @@ curl http://localhost:8128/api/v1/report.yaml
 
 During the migration period, the HACS integration may still serve its own dashboard panel; this endpoint is the canonical Core-side data source.
 
-## Dashboard UI (static assets)
+## Dashboard UI (React, served by Core)
 
-ThreadLens Core serves the canonical dashboard UI at `/`. The dashboard is dependency-free vanilla HTML/CSS/JS (no Node/Vite build, no external CDN) shipped in `static/` and consumes the read-only `api/v1/dashboard` payload via path-safe relative URLs. It works when hosted at the root, behind a reverse proxy, or under a Home Assistant Ingress path prefix.
+ThreadLens Core serves the canonical dashboard UI at `/`. It is a **React + TypeScript** app (built with Vite) whose source lives in `web/`. The production bundle is built into `static/` and shipped inside the Docker image — **no Node is required at runtime**, and the dashboard uses **no external CDN**. The same React build serves both desktop and mobile; the layout is mobile-first and responsive.
 
-The dashboard shows an incident summary, at-a-glance Matter node health with drilldown, OTBR/Thread network/Matter server status, mDNS/TREL observation, MQTT state, report links, and expandable raw diagnostics. Report YAML/JSON links open directly from Core using relative `api/v1/report.yaml` and `api/v1/report.json` URLs (no Home Assistant signed-path proxy).
+The dashboard consumes only the read-only `api/v1/dashboard` payload via path-safe relative URLs (`new URL("api/v1/dashboard", new URL(".", location.href))`). It works unchanged when hosted at the root, behind a reverse proxy subpath, or under a Home Assistant Ingress path prefix. It does not call Home Assistant, `hass.callWS`, or any HA report proxy.
 
-Core serves the dashboard from a configurable directory (`THREADLENS_STATIC_DIR`, default `/app/static` in the container image). Unknown frontend routes fall back to the dashboard shell for SPA routing, while `/api/...`, `/docs`, `/redoc`, and `/openapi.json` are never swallowed. API-only mode still works when static assets are absent — `GET /` returns an HTML link page and all `/api/v1/...` routes behave as before.
+The dashboard shows an incident summary (OK / Watch / Incident / Unknown), at-a-glance Matter node health grouped by severity with a full node drilldown, OTBR / Thread network / Matter server status, mDNS/TREL observation, MQTT state, report links, and expandable raw diagnostics. Report YAML/JSON links open directly from Core using relative `api/v1/report.yaml` and `api/v1/report.json` URLs. Reconciled OTBR endpoint mismatches are informational (details-only), and foreign TREL visibility alone is informational.
 
-The HACS integration dashboard remains the current production UI for Home Assistant users until the HACS migration pass; this Core dashboard does not depend on Home Assistant or HACS.
+Core serves the dashboard from a configurable directory (`THREADLENS_STATIC_DIR`, default `/app/static` in the container image). Unknown frontend routes fall back to the dashboard shell for SPA routing, while `/api/...`, `/docs`, `/redoc`, and `/openapi.json` are never swallowed. API-only mode still works when built assets are absent — `GET /` returns an HTML link page and all `/api/v1/...` routes behave as before.
+
+### Building the dashboard locally
+
+The built bundle is generated (not committed). For local non-Docker runs:
+
+```bash
+npm --prefix web ci
+npm --prefix web run build   # emits static/index.html + static/assets/
+```
+
+The Docker image build runs this automatically in a Node build stage. See [`web/README.md`](../web/README.md).
+
+The HACS integration dashboard remains the current production UI for Home Assistant users until the HACS migration pass; this Core dashboard does not depend on Home Assistant or HACS. The HAOS add-on Ingress integration follows after Core `0.2.0` is released.
 
 ## Related docs
 

@@ -59,9 +59,19 @@ def test_dockerfile_exposes_ports_and_healthcheck() -> None:
     assert "EXPOSE 8128 8129" in content
     assert "THREADLENS_CONFIG_PATH=/config/config.yaml" in content
     assert "THREADLENS_STATIC_DIR=/app/static" in content
-    assert "COPY static /app/static" in content
     assert "/api/v1/health" in content
     assert "USER threadlens" in content
+
+
+def test_dockerfile_builds_react_dashboard() -> None:
+    content = DOCKERFILE.read_text(encoding="utf-8")
+    # Multi-stage: a Node stage builds the React dashboard, and the final image
+    # copies only the built assets (no Node runtime).
+    assert "AS web" in content
+    assert "npm ci" in content
+    assert "npm run build" in content
+    assert "COPY --from=web /static /app/static" in content
+    assert "node" in content.lower()
 
 
 def test_api_version_endpoint(tmp_path: Path) -> None:

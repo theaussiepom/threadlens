@@ -143,14 +143,12 @@ def test_threadlens_static_dir_override(tmp_path: Path, monkeypatch) -> None:
         assert "ThreadLens Dashboard placeholder" in client.get("/").text
 
 
-def test_repo_static_index_exists_for_packaging() -> None:
-    index = REPO_STATIC / "index.html"
-    assert index.is_file()
-    content = index.read_text(encoding="utf-8")
-    assert "ThreadLens Dashboard" in content
-    assert 'href="dashboard.css"' in content
-    assert 'src="dashboard.js"' in content
-    assert 'id="tl-app"' in content
+def test_repo_static_dir_is_present_for_build_output() -> None:
+    # The React dashboard build emits index.html + assets/ into static/. The
+    # generated bundle is not committed, but the directory is kept so the build
+    # target and THREADLENS_STATIC_DIR resolution stay valid in fresh checkouts.
+    assert REPO_STATIC.is_dir()
+    assert (REPO_STATIC / ".gitkeep").is_file()
 
 
 def test_api_landing_page_includes_core_links() -> None:
