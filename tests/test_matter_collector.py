@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from threadlens.collectors.matter_server import (
     ALLOWED_COMMANDS,
+    FORBIDDEN_COMMANDS,
     MatterServerObserver,
 )
 from threadlens.config import (
@@ -307,8 +309,51 @@ async def test_forbidden_commands_are_not_sent(observer_factory) -> None:
     sent_commands = [message["command"] for message in ws.sent]
     assert sent_commands == ["start_listening"]
     assert all(command in ALLOWED_COMMANDS for command in sent_commands)
-    with pytest.raises(ValueError):
-        await observer._send_command(ws, "remove_node")
+    for forbidden in FORBIDDEN_COMMANDS:
+        with pytest.raises(ValueError, match="non-allowlisted"):
+            await observer._send_command(ws, forbidden)
+
+
+def test_read_attribute_and_ping_node_are_allowlisted() -> None:
+    assert "read_attribute" in ALLOWED_COMMANDS
+    assert "ping_node" in ALLOWED_COMMANDS
+
+
+def test_forbidden_commands_do_not_overlap_allowlist() -> None:
+    assert ALLOWED_COMMANDS.isdisjoint(FORBIDDEN_COMMANDS)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_consumes_registered_response_without_breaking_passive_flow(
+    observer_factory,
+) -> None:
+    observer = await observer_factory()
+    observer._requests.register("probe-1")
+
+    async def _wait():
+        return await observer._requests.wait_for("probe-1", timeout=1.0)
+
+    waiter = asyncio.create_task(_wait())
+    await asyncio.sleep(0)
+
+    consumed = observer._requests.dispatch_incoming(
+        {"message_id": "probe-1", "result": {"ping": True}}
+    )
+    assert consumed is True
+    result = await waiter
+    assert result.ok is True
+    assert result.result == {"ping": True}
+
+    # Uncorrelated start_listening-style inventory still reaches passive handler.
+    await observer._handle_message(
+        {"message_id": "startup", "result": [_node_payload(9, available=True)]}
+    )
+    assert observer.node_count == 1
+    state = await observer._repository.get_model_state(
+        CurrentStateType.MATTER_NODE, "matter_node:study:9", MatterNodeState
+    )
+    assert state is not None
+    assert state.available is True
 
 
 @pytest.mark.asyncio

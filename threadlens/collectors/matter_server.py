@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from typing import Any, Protocol
 
 from threadlens.collectors.matter_parse import parse_matter_node
+from threadlens.collectors.matter_ws import MatterWebsocketRequestManager
 from threadlens.config import MatterServerConfig, ThreadLensConfig
 from threadlens.models.capabilities import MatterServerCapabilities
 from threadlens.models.events import Event, EventSeverity, EventSourceType, EventSubjectType
@@ -31,7 +32,36 @@ from threadlens.utils.debounce import EventDebouncer
 from threadlens.utils.time import utc_now
 
 # Explicit read-only allowlist. Any command not in this set must never be sent.
-ALLOWED_COMMANDS = frozenset({"start_listening", "get_nodes", "server_info"})
+ALLOWED_COMMANDS = frozenset(
+    {
+        "start_listening",
+        "get_nodes",
+        "server_info",
+        "read_attribute",
+        "ping_node",
+    }
+)
+
+# Mutation/control commands that must never be allowlisted.
+FORBIDDEN_COMMANDS = frozenset(
+    {
+        "device_command",
+        "write_attribute",
+        "commission_with_code",
+        "commission_on_network",
+        "remove_node",
+        "set_wifi_credentials",
+        "set_thread_dataset",
+        "open_commissioning_window",
+        "interview_node",
+        "set_acl_entry",
+        "set_node_binding",
+        "set_default_fabric_label",
+        "import_test_node",
+        "check_node_update",
+        "update_node",
+    }
+)
 
 # python-matter-server event names we act on.
 EVENT_NODE_ADDED = "node_added"
@@ -82,6 +112,7 @@ class MatterServerObserver:
         self.last_disconnected: datetime | None = None
         self._capabilities = MatterServerCapabilities(variant=str(server_config.variant))
         self.sent_commands: list[str] = []
+        self._requests = MatterWebsocketRequestManager()
 
     @property
     def server_id(self) -> str:
@@ -185,6 +216,7 @@ class MatterServerObserver:
             await self._persist_server_state()
 
     async def _on_disconnected(self, reason: str | None) -> None:
+        self._requests.cancel_all(reason=reason)
         now = utc_now()
         self.last_error = reason
         self.last_disconnected = now
@@ -205,6 +237,9 @@ class MatterServerObserver:
 
     async def _handle_message(self, payload: dict[str, Any]) -> None:
         self.last_event_at = utc_now()
+
+        if self._requests.dispatch_incoming(payload):
+            return
 
         # Command responses (result of start_listening / get_nodes).
         if "result" in payload and "message_id" in payload:
