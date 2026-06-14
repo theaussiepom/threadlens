@@ -48,6 +48,8 @@ class FlappingConfig(BaseModel):
     matter_node_availability_warning_24h: int = Field(default=3, ge=0)
     matter_node_availability_degraded_24h: int = Field(default=6, ge=0)
     matter_node_unavailable_critical_minutes: int = Field(default=30, ge=0)
+    matter_node_read_probe_failures_warning_24h: int = Field(default=1, ge=0)
+    matter_node_read_probe_failures_degraded_24h: int = Field(default=3, ge=0)
     otbr_role_changes_warning_1h: int = Field(default=2, ge=0)
     otbr_role_changes_degraded_1h: int = Field(default=5, ge=0)
     mdns_service_flaps_warning_1h: int = Field(default=5, ge=0)

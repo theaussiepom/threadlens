@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from typing import Any, Protocol
 
 from threadlens.collectors.matter_parse import parse_matter_node
+from threadlens.collectors.matter_probe_scheduler import MatterProbeScheduler
 from threadlens.collectors.matter_probes import MatterProbeRunner, MatterProbeRunResult
 from threadlens.collectors.matter_ws import MatterCommandResult, MatterWebsocketRequestManager
 from threadlens.config import MatterServerConfig, ThreadLensConfig
@@ -116,6 +117,13 @@ class MatterServerObserver:
         self._requests = MatterWebsocketRequestManager()
         self._websocket: WebsocketLike | None = None
         self._node_attribute_keys: dict[int, frozenset[str]] = {}
+        self._probe_scheduler = MatterProbeScheduler(
+            config=self._config.matter.probes,
+            list_available_node_ids=self._list_available_node_ids,
+            run_probe=self._run_scheduled_probe,
+            is_running=lambda: self._running,
+            is_connected=lambda: self._websocket is not None and self.connected,
+        )
 
     @property
     def server_id(self) -> str:
@@ -140,9 +148,11 @@ class MatterServerObserver:
         self._running = True
         await self._persist_server_state()
         self._task = asyncio.create_task(self._run(), name=f"matter-observer:{self.server_id}")
+        await self._probe_scheduler.start()
 
     async def stop(self) -> None:
         self._running = False
+        await self._probe_scheduler.stop()
         if self._task is not None:
             self._task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -239,6 +249,12 @@ class MatterServerObserver:
             device_types=device_types,
             include_ping=include_ping,
         )
+
+    async def _run_scheduled_probe(self, node_id: int) -> MatterProbeRunResult:
+        return await self._probe_runner().run_scheduled_probe(node_id)
+
+    def _list_available_node_ids(self) -> list[int]:
+        return [node_id for node_id, node in self._nodes.items() if node.available]
 
     async def _send_command(
         self,
@@ -418,6 +434,7 @@ class MatterServerObserver:
             ),
             last_read_probe_at=existing.last_read_probe_at if existing else None,
             last_read_probe_ok=existing.last_read_probe_ok if existing else None,
+            last_read_probe_limited=existing.last_read_probe_limited if existing else False,
             last_read_probe_attribute_path=(
                 existing.last_read_probe_attribute_path if existing else None
             ),

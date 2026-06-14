@@ -329,6 +329,31 @@ class HealthEngine:
                     candidates.append(
                         (HealthState.WARNING, ["matter_node_availability_flapping_warning"])
                     )
+
+            if node.read_probe_diagnostics_available and not node.last_read_probe_limited:
+                if node.last_read_probe_ok is False:
+                    candidates.append((HealthState.WARNING, ["matter_node_read_probe_failed"]))
+
+                probe_failures = node.read_probe_failures_24h
+                if probe_failures is not None:
+                    if (
+                        probe_failures
+                        >= self.config.flapping.matter_node_read_probe_failures_degraded_24h
+                    ):
+                        candidates.append(
+                            (HealthState.DEGRADED, ["matter_node_read_probe_failures_24h"])
+                        )
+                    elif (
+                        probe_failures
+                        >= self.config.flapping.matter_node_read_probe_failures_warning_24h
+                    ):
+                        candidates.append(
+                            (HealthState.WARNING, ["matter_node_read_probe_failures_24h"])
+                        )
+
+            if node.ping_diagnostics_available and node.last_ping_ok is False:
+                candidates.append((HealthState.WARNING, ["matter_node_ping_probe_failed"]))
+
             if not candidates:
                 candidates.append((HealthState.HEALTHY, []))
 

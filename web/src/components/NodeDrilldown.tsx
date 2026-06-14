@@ -137,6 +137,69 @@ export function NodeDrilldown({
             ]}
           />
 
+          {node.read_probe?.diagnostics_available && (
+            <div className="tl-sheet-section">
+              <h3>Read diagnostics</h3>
+              <p className="tl-muted tl-note">
+                Safe read probes check whether the node responds to a read-only Matter attribute
+                read. They do not prove open/close or other commands are working.
+              </p>
+              {node.read_probe.summary && (
+                <p className="tl-assessment">{node.read_probe.summary}</p>
+              )}
+              <KeyValue
+                rows={[
+                  {
+                    label: "Last read probe",
+                    value: node.read_probe.limited
+                      ? "Limited"
+                      : boolText(node.read_probe.last_ok, "Succeeded", "Failed"),
+                  },
+                  { label: "Last probe time", value: fmtTime(node.read_probe.last_at) },
+                  { label: "Attribute path", value: orDash(node.read_probe.attribute_path) },
+                  {
+                    label: "Duration",
+                    value:
+                      node.read_probe.duration_ms != null
+                        ? `${node.read_probe.duration_ms} ms`
+                        : "—",
+                  },
+                  {
+                    label: "Failures (24h)",
+                    value: node.read_probe.failures_24h ?? "—",
+                  },
+                  {
+                    label: "Successes (24h)",
+                    value: node.read_probe.successes_24h ?? "—",
+                  },
+                ]}
+              />
+            </div>
+          )}
+
+          {node.ping_probe?.diagnostics_available && (
+            <div className="tl-sheet-section">
+              <h3>Ping diagnostics</h3>
+              <KeyValue
+                rows={[
+                  {
+                    label: "Last ping",
+                    value: boolText(node.ping_probe.last_ok, "Succeeded", "Failed"),
+                  },
+                  { label: "Last ping time", value: fmtTime(node.ping_probe.last_at) },
+                  {
+                    label: "Failures (24h)",
+                    value: node.ping_probe.failures_24h ?? "—",
+                  },
+                  {
+                    label: "Successes (24h)",
+                    value: node.ping_probe.successes_24h ?? "—",
+                  },
+                ]}
+              />
+            </div>
+          )}
+
           <div className="tl-sheet-events">
             <h3>Recent events</h3>
             {events.length ? (

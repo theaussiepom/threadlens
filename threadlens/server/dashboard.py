@@ -23,6 +23,10 @@ REASON_LABELS: dict[str, str] = {
     "otbr_unreachable": "OTBR REST API unreachable",
     "matter_server_disconnected": "Matter server disconnected",
     "matter_node_unavailable": "Matter node unavailable",
+    "matter_node_read_probe_failed": "Safe read probe failed recently",
+    "matter_node_read_probe_failures_24h": "Repeated safe read probe failures (24h)",
+    "matter_node_read_probe_diagnostics_limited": "Read diagnostics limited",
+    "matter_node_ping_probe_failed": "Ping probe failed recently",
     "primary_thread_network_unknown": "Primary Thread network unknown",
     "configured_otbrs_disagree_on_ext_pan_id": "Configured OTBRs disagree on network",
 }
@@ -35,7 +39,9 @@ FOREIGN_TREL_INFO_MESSAGE = (
 
 _CLASSIFICATION_HEALTH_LABEL = {
     "unavailable": "Unavailable",
+    "needs_attention": "Needs attention",
     "recently_unstable": "Recently unstable",
+    "diagnostics_limited": "Diagnostics limited",
     "healthy": "Healthy",
     "unknown": "Unknown",
 }
@@ -57,7 +63,12 @@ _MISMATCH_ONLY_REASON = "otbr_rest_endpoint_mismatch"
 # Reasons that are informational background observations on their own and should
 # not, by themselves, make the dashboard look unhealthy. Raw codes remain in
 # diagnostics/reasons_all.
-_INFO_REASON_CODES = frozenset({"foreign_trel_services_observed"})
+_INFO_REASON_CODES = frozenset(
+    {
+        "foreign_trel_services_observed",
+        "matter_node_read_probe_diagnostics_limited",
+    }
+)
 
 # Event windowing for the node-health / incident view.
 DEFAULT_EVENT_WINDOW = "24h"
@@ -73,6 +84,14 @@ _RELEVANT_EVENT_TYPES = frozenset(
         "matter_node.unavailable",
         "matter_node.recovered",
         "matter_node.removed",
+        "matter_node.read_probe.succeeded",
+        "matter_node.read_probe.failed",
+        "matter_node.read_probe.timed_out",
+        "matter_node.read_probe.unsupported",
+        "matter_node.read_probe.skipped",
+        "matter_node.ping.succeeded",
+        "matter_node.ping.failed",
+        "matter_node.ping.timed_out",
         "matter_server.connected",
         "matter_server.disconnected",
         "otbr.unreachable",
@@ -311,7 +330,14 @@ def _matter_section(
     nodes = [_node_entry(node, events) for node in matter_nodes if isinstance(node, dict)]
     nodes = _sort_nodes(nodes)
 
-    groups = {"unavailable": [], "recently_unstable": [], "unknown": [], "healthy": []}
+    groups = {
+        "unavailable": [],
+        "needs_attention": [],
+        "recently_unstable": [],
+        "diagnostics_limited": [],
+        "unknown": [],
+        "healthy": [],
+    }
     for node in nodes:
         groups.setdefault(node["classification"], []).append(node)
 
@@ -348,7 +374,9 @@ def _matter_section(
             {"node_id": n["node_id"], "server_id": n["server_id"], "friendly_name": n["name"]}
             for n in unavailable_nodes
         ],
-        "unstable_count": len(groups["recently_unstable"]),
+        "unstable_count": len(groups["recently_unstable"]) + len(groups["needs_attention"]),
+        "needs_attention_count": len(groups["needs_attention"]),
+        "diagnostics_limited_count": len(groups["diagnostics_limited"]),
         "healthy_count": len(groups["healthy"]),
         "unknown_count": len(groups["unknown"]),
         "recent_unavailable_count": recent_unavailable_count,
@@ -525,6 +553,56 @@ def compute_node_availability_metrics(
     }
 
 
+_READ_PROBE_FAILURES_WARNING_24H = 1
+_READ_PROBE_FAILURES_DEGRADED_24H = 3
+
+
+def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
+    diagnostics_available = bool(node.get("read_probe_diagnostics_available"))
+    limited = bool(node.get("last_read_probe_limited"))
+    failures_24h = node.get("read_probe_failures_24h")
+    successes_24h = node.get("read_probe_successes_24h")
+    last_ok = node.get("last_read_probe_ok")
+    available = node.get("available")
+
+    summary: str | None = None
+    if diagnostics_available:
+        if limited:
+            summary = "Read diagnostics are limited for this node (unsupported attribute path)."
+        elif available is True and last_ok is False:
+            summary = "Safe read probes failed recently. This does not prove commands are failing."
+        elif isinstance(failures_24h, int) and failures_24h >= _READ_PROBE_FAILURES_DEGRADED_24H:
+            summary = (
+                "Matter Server reports this node as available, but recent safe read probes "
+                "did not receive a successful response."
+            )
+
+    return {
+        "diagnostics_available": diagnostics_available,
+        "last_at": node.get("last_read_probe_at"),
+        "last_ok": last_ok,
+        "limited": limited,
+        "attribute_path": node.get("last_read_probe_attribute_path"),
+        "duration_ms": node.get("last_read_probe_duration_ms"),
+        "error_code": node.get("last_read_probe_error_code"),
+        "failures_24h": failures_24h,
+        "successes_24h": successes_24h,
+        "summary": summary,
+    }
+
+
+def _build_ping_block(node: dict[str, Any]) -> dict[str, Any] | None:
+    if not node.get("ping_diagnostics_available"):
+        return None
+    return {
+        "diagnostics_available": True,
+        "last_at": node.get("last_ping_at"),
+        "last_ok": node.get("last_ping_ok"),
+        "failures_24h": node.get("ping_failures_24h"),
+        "successes_24h": node.get("ping_successes_24h"),
+    }
+
+
 def classify_matter_node(node: dict[str, Any], node_events: list[dict[str, Any]]) -> str:
     """Classify a Matter node as unavailable / recently_unstable / healthy / unknown."""
     available = node.get("available")
@@ -538,6 +616,17 @@ def classify_matter_node(node: dict[str, Any], node_events: list[dict[str, Any]]
 
     if available is False:
         return "unavailable"
+
+    read_probe = _build_read_probe_block(node)
+    if available is True and read_probe.get("diagnostics_available"):
+        if read_probe.get("limited"):
+            return "diagnostics_limited"
+        failures = read_probe.get("failures_24h")
+        if isinstance(failures, int) and failures >= _READ_PROBE_FAILURES_DEGRADED_24H:
+            return "needs_attention"
+        if read_probe.get("last_ok") is False:
+            return "recently_unstable"
+
     if available is True and unstable:
         return "recently_unstable"
     if available is True:
@@ -604,6 +693,8 @@ def _node_entry(node: dict[str, Any], events: list[dict[str, Any]]) -> dict[str,
     display_name = _node_label(node)
     node_id = _coerce_node_id(node.get("node_id"))
     health_label = _CLASSIFICATION_HEALTH_LABEL.get(classification, "Unknown")
+    read_probe = _build_read_probe_block(node)
+    ping_probe = _build_ping_block(node)
     return {
         "node_id": node_id,
         "server_id": node.get("server_id"),
@@ -625,12 +716,21 @@ def _node_entry(node: dict[str, Any], events: list[dict[str, Any]]) -> dict[str,
         "recent_recovered_count": recent_recovered,
         "last_event_at": last_event_at,
         "sort_key": _NODE_SORT_ORDER.get(classification, 2),
+        "read_probe": read_probe,
+        "ping_probe": ping_probe,
         "events": [_slim_event(e) for e in node_events],
         **availability_metrics,
     }
 
 
-_NODE_SORT_ORDER = {"unavailable": 0, "recently_unstable": 1, "unknown": 2, "healthy": 3}
+_NODE_SORT_ORDER = {
+    "unavailable": 0,
+    "needs_attention": 1,
+    "recently_unstable": 2,
+    "diagnostics_limited": 3,
+    "unknown": 4,
+    "healthy": 5,
+}
 
 
 def _sort_nodes(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -695,6 +795,7 @@ def build_incident_summary(
 ) -> dict[str, Any]:
     """Compose a conservative incident assessment driven by node health + infra."""
     unavailable = [n for n in nodes if n.get("classification") == "unavailable"]
+    needs_attention = [n for n in nodes if n.get("classification") == "needs_attention"]
     unstable = [n for n in nodes if n.get("classification") == "recently_unstable"]
     infra_unhealthy = _infrastructure_unhealthy(
         otbr_entries,
@@ -757,6 +858,25 @@ def build_incident_summary(
             "headline": headline,
             "detail": detail,
             "affected_nodes": _affected_nodes(unavailable),
+            "affected_node_names": names,
+            "infrastructure": infrastructure,
+            "infrastructure_unhealthy": infra_unhealthy,
+        }
+
+    if needs_attention and not unavailable:
+        names = [n["name"] for n in needs_attention]
+        headline = f"{len(needs_attention)} Matter node(s) need attention: {', '.join(names)}."
+        detail = (
+            "Matter Server reports these nodes as available, but recent safe read probes "
+            "did not receive a successful response. This does not prove commands are failing."
+        )
+        return {
+            "state": "watch",
+            "title": headline,
+            "summary": detail,
+            "headline": headline,
+            "detail": detail,
+            "affected_nodes": _affected_nodes(needs_attention),
             "affected_node_names": names,
             "infrastructure": infrastructure,
             "infrastructure_unhealthy": infra_unhealthy,

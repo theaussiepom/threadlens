@@ -47,6 +47,7 @@ class ReportCapabilitiesSummary(BaseModel):
     matter_subscription_diagnostics: bool = False
     matter_case_diagnostics: bool = False
     matter_command_diagnostics: bool = False
+    matter_read_probe_diagnostics: bool = False
     agent_api_available: bool = False
     agent_local_diagnostics: bool = False
     agent_ssh_available: bool = False
@@ -117,6 +118,20 @@ class ReportMatterNodeEntry(BaseModel):
     subscription_diagnostics_available: bool = False
     case_diagnostics_available: bool = False
     command_diagnostics_available: bool = False
+    read_probe_diagnostics_available: bool = False
+    last_read_probe_at: datetime | None = None
+    last_read_probe_ok: bool | None = None
+    last_read_probe_limited: bool = False
+    last_read_probe_attribute_path: str | None = None
+    last_read_probe_duration_ms: int | None = None
+    last_read_probe_error_code: int | str | None = None
+    read_probe_failures_24h: int | None = None
+    read_probe_successes_24h: int | None = None
+    ping_diagnostics_available: bool = False
+    last_ping_at: datetime | None = None
+    last_ping_ok: bool | None = None
+    ping_failures_24h: int | None = None
+    ping_successes_24h: int | None = None
     health: HealthStatus = Field(default_factory=HealthStatus)
 
 

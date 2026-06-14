@@ -10,6 +10,7 @@ from threadlens.config import ThreadLensConfig
 from threadlens.models.agent import AgentState
 from threadlens.models.reports import ReportCapabilitiesSummary
 from threadlens.models.state import (
+    MatterNodeState,
     MatterServerState,
     MdnsServiceState,
     OtbrState,
@@ -52,12 +53,14 @@ async def build_capabilities_payload(
     matter_servers = await _list_states(
         repository, CurrentStateType.MATTER_SERVER, MatterServerState
     )
+    matter_nodes = await _list_states(repository, CurrentStateType.MATTER_NODE, MatterNodeState)
     mdns_services = await _list_states(repository, CurrentStateType.MDNS_SERVICE, MdnsServiceState)
     trel_services = await _list_states(repository, CurrentStateType.TREL_SERVICE, TrelServiceState)
     agent_states = await _list_states(repository, CurrentStateType.AGENT, AgentState)
     capabilities: ReportCapabilitiesSummary = generator._build_capabilities(
         otbr_states=otbr_states,
         matter_servers=matter_servers,
+        matter_nodes=matter_nodes,
         mdns_services=mdns_services,
         trel_services=trel_services,
         agent_states=agent_states,
