@@ -1,5 +1,9 @@
+# ThreadLens sample configuration — safe for public open-source use.
+# Copy to /config/config.yaml and adjust hosts, URLs, and MQTT credentials locally.
+# Never commit passwords or live network secrets to git.
+
 site:
-  name: "Home"
+  name: "My ThreadLens Site"
 
 mode: server
 
@@ -32,12 +36,13 @@ otbr:
   use_legacy_node_fallback: true
 
 mqtt:
-  # Enable after configuring your Home Assistant MQTT broker.
-  enabled: false
+  enabled: true
+  # Replace with your MQTT broker hostname or IP (e.g. homeassistant.local, 192.168.1.50).
+  # broker.mqtt is shown as an example only — use whatever resolves on your LAN.
   host: "homeassistant.local"
   port: 1883
-  # username: null
-  # password: null
+  username: null
+  password: null
   discovery_prefix: "homeassistant"
   topic_prefix: "threadlens"
   retain_discovery: true
@@ -54,30 +59,26 @@ mdns:
     - "_matter._tcp.local."
     - "_matterc._udp.local."
 
-# Uncomment and adjust IPs for your environment.
-# ThreadLens is read-only; REST/websocket URLs must be reachable from the container/host.
-otbrs: []
-# otbrs:
-#   - id: "study"
-#     name: "Study OTBR"
-#     rest_url: "http://192.168.100.4:8081"
-#     agent_url: null  # optional co-located agent, e.g. http://192.168.100.4:8129
-#   - id: "lounge"
-#     name: "Lounge OTBR"
-#     rest_url: "http://192.168.100.7:8081"
-#     agent_url: null
+otbrs:
+  - id: "primary"
+    name: "Primary OTBR"
+    rest_url: "http://192.168.1.10:8081"
+    agent_url: null
+  - id: "secondary"
+    name: "Secondary OTBR"
+    rest_url: "http://192.168.1.11:8081"
+    agent_url: null
 
 matter:
   reconnect_initial_seconds: 5
   reconnect_max_seconds: 60
   request_timeout_seconds: 10
 
-matter_servers: []
-# matter_servers:
-#   - id: "study_matter"
-#     name: "Study Matter Server"
-#     websocket_url: "ws://192.168.100.4:5580/ws"
-#     variant: "python"
+matter_servers:
+  - id: "home"
+    name: "Home Matter Server"
+    websocket_url: "ws://192.168.1.10:5580/ws"
+    variant: "python"
 
 reports:
   redact_secrets: true

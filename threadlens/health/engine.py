@@ -33,15 +33,16 @@ from threadlens.models.state import (
 from threadlens.storage.repositories import CurrentStateType, StorageRepository
 from threadlens.utils.time import utc_now
 
+# Service visibility instability for health uses add/remove cycles only.
+# service_changed events remain in history for diagnostics but are not counted
+# because mDNS update callbacks often reflect normal TXT/address refresh churn.
 MDNS_FLAP_EVENTS = (
     "mdns.service_added",
     "mdns.service_removed",
-    "mdns.service_changed",
 )
 TREL_FLAP_EVENTS = (
     "trel.service_added",
     "trel.service_removed",
-    "trel.service_changed",
 )
 WARNING_SEVERITIES = (
     EventSeverity.WARNING.value,

@@ -17,8 +17,7 @@
 
 services:
   threadlens:
-    build: .
-    image: ghcr.io/theaussiepom/threadlens:local
+    image: ghcr.io/theaussiepom/threadlens:0.1.2
     container_name: threadlens
     restart: unless-stopped
     network_mode: host
@@ -26,6 +25,6 @@ services:
       - ./examples/config:/config:ro
       - ./data:/data
     environment:
-      TZ: Australia/Brisbane
+      TZ: UTC
       THREADLENS_CONFIG_PATH: /config/config.yaml
       THREADLENS_MODE: both

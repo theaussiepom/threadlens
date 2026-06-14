@@ -27,7 +27,7 @@ flapping:
 
 mqtt:
   enabled: true
-  host: "mqtt"
+  host: "homeassistant.local"
   port: 1883
   username: null
   password: null
@@ -47,15 +47,15 @@ mdns:
     - "_matterc._udp.local."
 
 otbrs:
-  - id: "study"
-    name: "Study OTBR"
-    rest_url: "http://192.168.100.4:8081"
+  - id: "primary"
+    name: "Primary OTBR"
+    rest_url: "http://192.168.1.10:8081"
     agent_url: null
 
 matter_servers:
-  - id: "study_matter"
-    name: "Study Matter Server"
-    websocket_url: "ws://192.168.100.4:5580/ws"
+  - id: "home"
+    name: "Home Matter Server"
+    websocket_url: "ws://192.168.1.10:5580/ws"
     variant: "python"
 
 reports:

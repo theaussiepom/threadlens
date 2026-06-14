@@ -5,23 +5,27 @@
 Released images are published by GitHub Actions to:
 
 ```text
-ghcr.io/theaussiepom/threadlens:0.1.1
+ghcr.io/theaussiepom/threadlens:0.1.2
 ```
 
-Pull and run without a local build:
+Pin a specific tag for deployments. `latest` exists but is not recommended for production.
+
+Pull and run without a local build (Linux host networking recommended):
 
 ```bash
-docker pull ghcr.io/theaussiepom/threadlens:0.1.1
-docker compose -f docker-compose.study-both.example.yml up -d
+docker pull ghcr.io/theaussiepom/threadlens:0.1.2
+docker compose -f docker-compose.host-network.example.yml up -d
 ```
 
 See [RELEASE.md](../RELEASE.md) for the tag-driven publish workflow.
 
-## Build (local development)
+## Build (local development only)
 
 ```bash
 docker build -t ghcr.io/theaussiepom/threadlens:local .
 ```
+
+Do not use local builds for releases — GHCR publish is automated on version tags.
 
 Image details:
 
@@ -30,6 +34,7 @@ Image details:
 - Creates `/config` and `/data`
 - Exposes ports `8128` (server) and `8129` (agent)
 - Default env: `THREADLENS_CONFIG_PATH=/config/config.yaml`, `PYTHONUNBUFFERED=1`
+- Multi-arch: `linux/amd64`, `linux/arm64`
 
 ## Run (bridge networking)
 
@@ -44,7 +49,7 @@ Good for REST/API, OTBR polling, Matter websocket, MQTT, and reports.
 ## Run (host networking — Linux)
 
 ```bash
-docker compose -f docker-compose.host-network.example.yml up
+docker compose -f docker-compose.host-network.example.yml up -d
 ```
 
 Do not use `ports:` with `network_mode: host`.
@@ -55,6 +60,8 @@ Do not use `ports:` with `network_mode: host`.
 |-------|---------|
 | `./examples/config:/config:ro` | Config file at `/config/config.yaml` |
 | `./data:/data` | SQLite database and persistence |
+
+Use a local config override (gitignored) for MQTT credentials — see [configuration.md](configuration.md).
 
 ## Healthcheck
 
@@ -98,7 +105,7 @@ curl http://127.0.0.1:8129/api/v1/agent/health
 
 ## .env example
 
-Copy `.env.example` to `.env` for local compose overrides.
+Copy `.env.example` to `.env` for local compose overrides. `.env` is gitignored.
 
 ## Home Assistant OS add-on
 
@@ -110,14 +117,17 @@ A Home Assistant OS add-on repository is available separately:
 
 See the add-on `DOCS.md` for installation and configuration on HAOS.
 
-## Live test (example topology)
+## Example compose files
 
-For a two-Pi deployment (Study `.4` in `both` mode, Lounge `.7` in `agent` mode), see:
+| File | Purpose |
+|------|---------|
+| `docker-compose.host-network.example.yml` | **Recommended** published-image deployment on Linux |
+| `docker-compose.study-both.example.yml` | Both-mode example with sample config |
+| `docker-compose.lounge-agent.example.yml` | Agent-only example |
+| `docker-compose.example.yml` | Local bridge-mode development build |
 
-- [LIVE_TEST_0.1.0.md](../LIVE_TEST_0.1.0.md) (runbook; image tag updated to `0.1.1` in compose files)
-- [examples/live/study-both.config.yaml](../examples/live/study-both.config.yaml)
-- [examples/live/lounge-agent.config.yaml](../examples/live/lounge-agent.config.yaml)
-- [docker-compose.study-both.example.yml](../docker-compose.study-both.example.yml)
-- [docker-compose.lounge-agent.example.yml](../docker-compose.lounge-agent.example.yml)
+## Maintainer live-test runbook
 
-Published image: `ghcr.io/theaussiepom/threadlens:0.1.1`
+For a labelled private home topology runbook, see [LIVE_TEST_0.1.0.md](../LIVE_TEST_0.1.0.md). That document is not the default public deployment path.
+
+Published image: `ghcr.io/theaussiepom/threadlens:0.1.2`

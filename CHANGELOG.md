@@ -2,6 +2,27 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.1.2] - 2026-06-14
+
+Patch release — mDNS flap health semantics and public-release documentation polish.
+
+### Fixed
+
+- mDNS/TREL flap health counts only non-initial `service_added` and `service_removed` events
+- Normal `service_changed` refresh churn no longer escalates to `mdns_service_flapping_degraded`
+- Multi-arch GHCR publish (`linux/amd64`, `linux/arm64`) for Raspberry Pi deployments
+
+### Changed
+
+- Committed example configs use generic `192.168.1.x` placeholders and `username`/`password: null`
+- README and release docs updated for first-time Home Assistant users
+- Release deployment examples pin `ghcr.io/theaussiepom/threadlens:0.1.2`
+
+### Known expected warnings
+
+- `otbr_rest_endpoint_mismatch` when OTBR JSON:API `/api/node` is stale while `/node` is active
+- `foreign_trel_services_observed` when foreign Apple/HomePod TREL services are visible
+
 ## [0.1.1] - 2026-06-14
 
 Live-test hardening release after Ben Home validation (Study Pi + Lounge OTBR topology).
@@ -34,7 +55,7 @@ Live-test hardening release after Ben Home validation (Study Pi + Lounge OTBR to
 
 - `otbr_rest_endpoint_mismatch` when OTBR JSON:API `/api/node` is stale while `/node` is active
 - `foreign_trel_services_observed` when foreign Apple/HomePod TREL services are visible
-- `mdns_service_flapping_warning` may appear from `mdns.service_changed` events — monitor only unless it escalates to degraded
+- `mdns_service_flapping_warning` may appear from true add/remove instability — monitor only unless it escalates to degraded
 
 ## [0.1.0] - 2026-06-13
 

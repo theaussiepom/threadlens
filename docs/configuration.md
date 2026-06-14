@@ -71,10 +71,10 @@ otbr:
 
 ```yaml
 otbrs:
-  - id: "study"
-    name: "Study OTBR"
-    rest_url: "http://192.168.100.4:8081"
-    agent_url: null  # optional, e.g. http://192.168.100.4:8129
+  - id: "primary"
+    name: "Primary OTBR"
+    rest_url: "http://192.168.1.10:8081"
+    agent_url: null  # optional co-located agent, e.g. http://192.168.1.10:8129
 ```
 
 URLs must be reachable from the ThreadLens host/container.
@@ -88,9 +88,9 @@ matter:
   request_timeout_seconds: 10
 
 matter_servers:
-  - id: "study_matter"
-    name: "Study Matter Server"
-    websocket_url: "ws://192.168.100.4:5580/ws"
+  - id: "home"
+    name: "Home Matter Server"
+    websocket_url: "ws://192.168.1.10:5580/ws"
     variant: "python"
 ```
 
@@ -114,18 +114,22 @@ Disable if running without multicast visibility and you only need OTBR/Matter RE
 
 ```yaml
 mqtt:
-  enabled: false
-  host: "homeassistant.local"
+  enabled: true
+  host: "homeassistant.local"  # or broker.mqtt, or your broker IP
   port: 1883
+  username: null
+  password: null
   discovery_prefix: "homeassistant"
   topic_prefix: "threadlens"
   per_trel_service_entities: false
   per_node_entities: true
 ```
 
+Replace `host` with your MQTT broker hostname or IP. `broker.mqtt` is a valid example only if that name resolves on your LAN.
+
 Do not commit broker passwords to git. Use environment-specific config or secrets management.
 
-For live deployments, copy `examples/live/study-both.config.yaml` to a local file (for example `study-both.config.local.yaml`, gitignored) and set `mqtt.username` and `mqtt.password` there. The committed example uses `null` placeholders only.
+For live deployments, copy an example config to a local file (for example `config.local.yaml`, gitignored) and set `mqtt.username` and `mqtt.password` there. Committed examples use `null` placeholders only.
 
 ### `homeassistant`
 

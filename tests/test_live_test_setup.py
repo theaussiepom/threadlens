@@ -1,4 +1,4 @@
-"""Live test 0.1.0 setup validation (Ben Home topology examples)."""
+"""Live example config and compose validation."""
 
 from __future__ import annotations
 
@@ -19,22 +19,22 @@ LOUNGE_COMPOSE = REPO_ROOT / "docker-compose.lounge-agent.example.yml"
 def test_live_config_files_validate() -> None:
     study = load_config(STUDY_CONFIG)
     lounge = load_config(LOUNGE_CONFIG)
-    assert study.site.name == "Ben Home"
-    assert lounge.site.name == "Ben Home"
+    assert study.site.name == "My ThreadLens Site"
+    assert lounge.site.name == "My ThreadLens Site"
 
 
 def test_study_live_config_topology() -> None:
     config = load_config(STUDY_CONFIG)
     assert config.mode == RuntimeMode.BOTH
     assert len(config.otbrs) == 2
-    assert config.otbrs[0].id == "study"
-    assert config.otbrs[0].rest_url == "http://192.168.100.4:8081"
-    assert config.otbrs[0].agent_url == "http://192.168.100.4:8129"
-    assert config.otbrs[1].id == "lounge"
-    assert config.otbrs[1].rest_url == "http://192.168.100.7:8081"
-    assert config.otbrs[1].agent_url == "http://192.168.100.7:8129"
+    assert config.otbrs[0].id == "primary"
+    assert config.otbrs[0].rest_url == "http://192.168.1.10:8081"
+    assert config.otbrs[0].agent_url == "http://192.168.1.10:8129"
+    assert config.otbrs[1].id == "secondary"
+    assert config.otbrs[1].rest_url == "http://192.168.1.11:8081"
+    assert config.otbrs[1].agent_url is None
     assert len(config.matter_servers) == 1
-    assert config.matter_servers[0].websocket_url == "ws://192.168.100.4:5580/ws"
+    assert config.matter_servers[0].websocket_url == "ws://192.168.1.10:5580/ws"
     assert config.mqtt.enabled is True
     assert config.mqtt.host == "broker.mqtt"
     assert config.mqtt.username is None
@@ -70,6 +70,14 @@ def test_live_compose_commands_match_modes() -> None:
     lounge = yaml.safe_load(LOUNGE_COMPOSE.read_text(encoding="utf-8"))
     assert study["services"]["threadlens"]["command"] == ["--mode", "both"]
     assert lounge["services"]["threadlens-agent"]["command"] == ["--mode", "agent"]
+
+
+def test_live_compose_uses_pinned_release_image() -> None:
+    study = yaml.safe_load(STUDY_COMPOSE.read_text(encoding="utf-8"))
+    lounge = yaml.safe_load(LOUNGE_COMPOSE.read_text(encoding="utf-8"))
+    study_image = "ghcr.io/theaussiepom/threadlens:0.1.2"
+    assert study["services"]["threadlens"]["image"] == study_image
+    assert lounge["services"]["threadlens-agent"]["image"] == study_image
 
 
 def test_live_test_doc_exists_with_key_endpoints() -> None:
