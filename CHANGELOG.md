@@ -2,7 +2,30 @@
 
 All notable changes to ThreadLens are documented in this file.
 
-## [0.2.0] - Unreleased
+## [0.2.1] - 2026-06-15
+
+Validation build for the Matter read probe feature stream (PRs #9–#13). Intended for live validation on Study Pi before a final probe release declaration.
+
+### Added
+
+- Matter websocket request manager for correlated read-only Matter Server requests
+- Matter read probe foundation: config, models, manual runner, and scheduler
+- Read probe health, dashboard, and report surfacing with friendly labels
+- MQTT read probe summary entities and documentation (`matter-read-probes.md`, Future Option 2 docs)
+- `MatterProbePlanner` with user-facing probe modes (`off`, `conservative`, `standard`, `diagnostic`)
+- Advanced-only raw attribute path overrides under `matter.probes.advanced`
+- Per-node unsupported-path learning and last-successful-probe reuse
+
+### Changed
+
+- Probe config is mode-only; legacy `enabled` and top-level probe tuning keys are rejected
+
+### Notes
+
+- Default probe mode is `off` — probes must be enabled explicitly for live validation
+- This release does not declare live probe validation complete
+
+## [0.2.0] - 2026-06-14
 
 ### Added
 

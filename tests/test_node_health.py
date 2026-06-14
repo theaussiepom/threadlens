@@ -11,7 +11,7 @@ from threadlens.server.dashboard import (
     classify_matter_node,
 )
 
-VERSION = {"tool": "ThreadLens", "version": "0.2.0"}
+VERSION = {"tool": "ThreadLens", "version": "0.2.1"}
 STATUS = {
     "collectors": {"mdns": {"observation_degraded": False}},
     "reports": {"last_generated_at": None},
