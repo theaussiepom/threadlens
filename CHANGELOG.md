@@ -8,6 +8,7 @@ All notable changes to ThreadLens are documented in this file.
 
 - `GET /api/v1/dashboard` — Core-native dashboard payload aggregation (read-only, Home Assistant agnostic)
 - Dashboard semantics for reconciled OTBR endpoint mismatch, informational foreign TREL, Matter node health classification, incident summary, and relative report URLs
+- Core static dashboard serving foundation (`THREADLENS_STATIC_DIR`, SPA fallback, API route guard, placeholder `static/index.html`)
 
 ## [0.1.2] - 2026-06-14
 

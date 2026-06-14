@@ -16,8 +16,11 @@ RUN useradd --create-home --shell /usr/sbin/nologin threadlens
 WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/threadlens /usr/local/bin/threadlens
+COPY static /app/static
 
-RUN mkdir -p /config /data && chown -R threadlens:threadlens /config /data
+ENV THREADLENS_STATIC_DIR=/app/static
+
+RUN mkdir -p /config /data && chown -R threadlens:threadlens /config /data /app/static
 
 USER threadlens
 
