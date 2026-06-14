@@ -59,7 +59,8 @@ def test_matter_probe_config_defaults() -> None:
     assert probes.manual_enabled is True
     assert probes.timeout_seconds == 10.0
     assert probes.max_concurrent == 1
-    assert probes.attributes.fallback == ["0/40/5"]
+    assert probes.attributes.fallback == ["0/40/2", "0/40/4", "0/40/5"]
+    assert probes.effective_mode.value == "off"
 
 
 def test_env_override_site_name(monkeypatch: pytest.MonkeyPatch) -> None:

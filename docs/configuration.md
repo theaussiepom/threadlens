@@ -103,25 +103,46 @@ matter_servers:
     variant: "python"
 ```
 
-ThreadLens uses read-only websocket commands for inventory (`start_listening`, `get_nodes`, `server_info`). Optional **Matter read probes** use `read_attribute` and optionally `ping_node` when `matter.probes.enabled: true`. Read probes are disabled by default and do not prove Home Assistant commands work. See [matter-read-probes.md](matter-read-probes.md).
+ThreadLens uses read-only websocket commands for inventory (`start_listening`, `get_nodes`, `server_info`). Optional **Matter read probes** use `read_attribute` and optionally `ping_node` when probes are active. Read probes are disabled by default and do not prove Home Assistant commands work. See [matter-read-probes.md](matter-read-probes.md).
 
-Example with scheduled probes (start conservative on Thread networks):
+Most users only need a mode:
 
 ```yaml
 matter:
   probes:
     enabled: true
+    mode: conservative
     schedule_enabled: true
-    interval_seconds: 1800
-    timeout_seconds: 10
-    max_concurrent: 1
-    jitter_seconds: 300
-    ping_enabled: false
-    attributes:
-      window_covering:
-        - "1/258/10"
-      fallback:
-        - "0/40/5"
+```
+
+Supported modes: `off`, `conservative`, `standard`, `diagnostic`.
+
+Advanced timing, ping, attribute overrides, and per-node settings live under `matter.probes.advanced`. Legacy top-level `interval_seconds`, `attributes`, and related fields remain compatible.
+
+Example with advanced overrides:
+
+```yaml
+matter:
+  probes:
+    enabled: true
+    mode: standard
+    schedule_enabled: true
+    advanced:
+      interval_seconds: 1800
+      timeout_seconds: 10
+      max_concurrent: 1
+      jitter_seconds: 300
+      ping_enabled: false
+      attributes:
+        window_covering:
+          - "1/258/10"
+        fallback:
+          - "0/40/2"
+          - "0/40/4"
+      per_node:
+        "24":
+          preferred:
+            - "0/40/2"
 ```
 
 Future passive command diagnostics from Matter Server are documented separately in [matter-command-diagnostics-future.md](matter-command-diagnostics-future.md).

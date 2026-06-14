@@ -150,13 +150,20 @@ export function NodeDrilldown({
               <KeyValue
                 rows={[
                   {
-                    label: "Last read probe",
+                    label: "Probe type",
+                    value: orDash(node.read_probe.probe_label),
+                  },
+                  {
+                    label: "Last result",
                     value: node.read_probe.limited
                       ? "Limited"
-                      : boolText(node.read_probe.last_ok, "Succeeded", "Failed"),
+                      : boolText(node.read_probe.last_ok, "OK", "Failed"),
                   },
                   { label: "Last probe time", value: fmtTime(node.read_probe.last_at) },
-                  { label: "Attribute path", value: orDash(node.read_probe.attribute_path) },
+                  {
+                    label: "Probe path",
+                    value: orDash(node.read_probe.attribute_path),
+                  },
                   {
                     label: "Duration",
                     value:
@@ -174,6 +181,9 @@ export function NodeDrilldown({
                   },
                 ]}
               />
+              {node.read_probe.note && (
+                <p className="tl-muted tl-note">{node.read_probe.note}</p>
+              )}
             </div>
           )}
 

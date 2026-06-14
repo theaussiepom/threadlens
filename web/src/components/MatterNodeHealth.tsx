@@ -19,9 +19,19 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
   const up = node.resubscribe_count_24h || 0;
   const showChurn = down > 0 || up > 0;
   const readProbe = node.read_probe;
+  const overviewLabel = readProbe?.overview_label;
   const showReadProbe =
     readProbe?.diagnostics_available &&
-    (readProbe.last_ok === false || (readProbe.failures_24h ?? 0) > 0);
+    (readProbe.last_ok === false ||
+      readProbe.limited ||
+      (readProbe.failures_24h ?? 0) > 0);
+  const readProbeHint =
+    overviewLabel ||
+    (readProbe?.limited
+      ? "Read diagnostics limited"
+      : readProbe?.last_ok === false
+        ? "Read probe issue"
+        : null);
 
   return (
     <button
@@ -42,8 +52,8 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
               {down} down / {up} up (24h)
             </span>
           )}
-          {showReadProbe && (
-            <span className="tl-node-read-probe tl-muted">Read probe issue</span>
+          {showReadProbe && readProbeHint && (
+            <span className="tl-node-read-probe tl-muted">{readProbeHint}</span>
           )}
           {node.last_event_at && (
             <span className="tl-node-last">Last event {fmtRelative(node.last_event_at)}</span>
@@ -53,7 +63,7 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
       <span className="tl-node-end">
         <Badge tone={meta.tone}>{meta.label}</Badge>
         {readProbe?.diagnostics_available && !showReadProbe && node.classification === "healthy" && (
-          <Badge tone="info">Read diagnostics</Badge>
+          <Badge tone="info">{overviewLabel || "Read checks OK"}</Badge>
         )}
         <span className="tl-node-chevron" aria-hidden="true">
           ›

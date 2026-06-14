@@ -162,3 +162,10 @@ class MatterNodeState(BaseModel):
     last_ping_ok: bool | None = None
     ping_failures_24h: int | None = None
     ping_successes_24h: int | None = None
+    matter_attribute_keys: list[str] | None = None
+    inferred_device_types: list[str] | None = None
+    last_successful_probe_kind: str | None = None
+    last_successful_probe_path: str | None = None
+    last_probe_label: str | None = None
+    last_unsupported_probe_paths: list[str] | None = None
+    last_read_probe_note: str | None = None

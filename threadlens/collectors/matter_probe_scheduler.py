@@ -40,7 +40,7 @@ class MatterProbeScheduler:
         return self._task is not None and not self._task.done()
 
     def should_run(self) -> bool:
-        return self._config.enabled and self._config.schedule_enabled
+        return self._config.probes_active and self._config.schedule_enabled
 
     async def start(self) -> None:
         if self._task is not None or not self.should_run():

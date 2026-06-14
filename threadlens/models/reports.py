@@ -127,6 +127,10 @@ class ReportMatterNodeEntry(BaseModel):
     last_read_probe_error_code: int | str | None = None
     read_probe_failures_24h: int | None = None
     read_probe_successes_24h: int | None = None
+    last_probe_label: str | None = None
+    last_successful_probe_kind: str | None = None
+    last_successful_probe_path: str | None = None
+    last_read_probe_note: str | None = None
     ping_diagnostics_available: bool = False
     last_ping_at: datetime | None = None
     last_ping_ok: bool | None = None

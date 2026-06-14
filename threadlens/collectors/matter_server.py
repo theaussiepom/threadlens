@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from typing import Any, Protocol
 
 from threadlens.collectors.matter_parse import parse_matter_node
+from threadlens.collectors.matter_probe_planner import infer_device_types
 from threadlens.collectors.matter_probe_scheduler import MatterProbeScheduler
 from threadlens.collectors.matter_probes import MatterProbeRunner, MatterProbeRunResult
 from threadlens.collectors.matter_ws import MatterCommandResult, MatterWebsocketRequestManager
@@ -407,8 +408,19 @@ class MatterServerObserver:
         availability_flaps_24h = await self._count_availability_flaps(node_id)
 
         attributes = payload.get("attributes")
+        attribute_keys: frozenset[str] | None = None
         if isinstance(attributes, dict):
-            self._node_attribute_keys[node_id] = frozenset(str(key) for key in attributes)
+            attribute_keys = frozenset(str(key) for key in attributes)
+            self._node_attribute_keys[node_id] = attribute_keys
+
+        inferred_types = (
+            infer_device_types(
+                attribute_keys=attribute_keys or frozenset(),
+                product_name=_pick(parsed.product, existing.product if existing else None),
+            )
+            if attribute_keys
+            else (existing.inferred_device_types if existing else None)
+        )
 
         state = MatterNodeState(
             node_id=node_id,
@@ -447,6 +459,19 @@ class MatterServerObserver:
             last_ping_ok=existing.last_ping_ok if existing else None,
             ping_failures_24h=existing.ping_failures_24h if existing else None,
             ping_successes_24h=existing.ping_successes_24h if existing else None,
+            matter_attribute_keys=(
+                sorted(attribute_keys)[:100]
+                if attribute_keys
+                else (existing.matter_attribute_keys if existing else None)
+            ),
+            inferred_device_types=inferred_types,
+            last_successful_probe_kind=(existing.last_successful_probe_kind if existing else None),
+            last_successful_probe_path=(existing.last_successful_probe_path if existing else None),
+            last_probe_label=existing.last_probe_label if existing else None,
+            last_unsupported_probe_paths=(
+                existing.last_unsupported_probe_paths if existing else None
+            ),
+            last_read_probe_note=existing.last_read_probe_note if existing else None,
         )
         self._nodes[node_id] = state
         await self._repository.upsert_model_state(

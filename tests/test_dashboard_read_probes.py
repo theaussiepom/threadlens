@@ -62,6 +62,27 @@ def test_unavailable_remains_dominant_over_probe_failure() -> None:
     assert classify_matter_node(node, []) == "unavailable"
 
 
+def test_read_probe_block_exposes_friendly_overview_labels() -> None:
+    ok_block = _build_read_probe_block(
+        _node(
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=True,
+            last_probe_label="Basic read check",
+        )
+    )
+    assert ok_block["overview_label"] == "Read checks OK"
+    assert ok_block["probe_label"] == "Basic read check"
+
+    limited_block = _build_read_probe_block(
+        _node(
+            read_probe_diagnostics_available=True,
+            last_read_probe_limited=True,
+            last_probe_label="Blind status read check",
+        )
+    )
+    assert limited_block["overview_label"] == "Read diagnostics limited"
+
+
 def test_node_entry_includes_read_probe_block() -> None:
     node = _node(
         read_probe_diagnostics_available=True,

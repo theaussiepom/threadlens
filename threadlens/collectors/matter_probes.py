@@ -12,8 +12,13 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Protocol
 
+from threadlens.collectors.matter_probe_planner import (
+    MatterProbePlanner,
+    ProbeCandidate,
+    first_probe_candidate,
+)
 from threadlens.collectors.matter_ws import MatterCommandResult
-from threadlens.config import MatterProbeConfig
+from threadlens.config import MatterProbeConfig, ProbeMode
 from threadlens.models.events import EventSeverity
 from threadlens.models.state import MatterNodeState
 from threadlens.utils.time import utc_now
@@ -42,6 +47,8 @@ _UNSUPPORTED_DETAILS_RE = re.compile(
     r"unsupported|not\s+support|unknown\s+attribute|invalid\s+attribute|attribute.+(?:missing|not\s+found)",
     re.IGNORECASE,
 )
+
+_GENERIC_WEIGHTS = frozenset({"generic", "override"})
 
 
 class MatterProbeRequester(Protocol):
@@ -89,6 +96,14 @@ class MatterProbeRunResult:
     ping_ok: bool | None = None
 
 
+@dataclass(frozen=True)
+class _ProbeAttemptOutcome:
+    ok: bool | None
+    limited: bool
+    candidate: ProbeCandidate
+    command_result: MatterCommandResult
+
+
 def is_unsupported_attribute_error(result: MatterCommandResult) -> bool:
     """Best-effort classification for unsupported attribute read failures."""
     if result.ok or result.timed_out:
@@ -106,23 +121,19 @@ def resolve_read_probe_attribute_path(
     attribute_keys: frozenset[str] | set[str] | None,
     device_types: list[str] | None,
     config: MatterProbeConfig,
+    node: MatterNodeState | None = None,
 ) -> str:
-    """Choose a node-type-specific attribute path when known, else fallback."""
-    window_paths = config.attributes.window_covering
-    fallback_paths = config.attributes.fallback
-
-    is_window_covering = False
-    if device_types:
-        lowered = {item.strip().lower() for item in device_types if item}
-        is_window_covering = any("window covering" in item for item in lowered)
-    if not is_window_covering and attribute_keys:
-        is_window_covering = any(key.startswith("1/258/") for key in attribute_keys)
-
-    if is_window_covering and window_paths:
-        return window_paths[0]
-    if fallback_paths:
-        return fallback_paths[0]
-    return "0/40/5"
+    """Return the first planned probe path for compatibility helpers."""
+    del device_types
+    probe_node = node or MatterNodeState(node_id=0, server_id="")
+    candidate = first_probe_candidate(
+        node=probe_node,
+        attribute_keys=frozenset(attribute_keys or []),
+        config=config,
+    )
+    if candidate is not None:
+        return candidate.attribute_path
+    return config.attributes.fallback[0] if config.attributes.fallback else "0/40/2"
 
 
 def _error_summary(result: MatterCommandResult) -> str | None:
@@ -137,8 +148,12 @@ def _error_summary(result: MatterCommandResult) -> str | None:
     return None
 
 
+def _is_generic_candidate(candidate: ProbeCandidate) -> bool:
+    return candidate.health_weight in _GENERIC_WEIGHTS
+
+
 class MatterProbeRunner:
-    """Perform a single read reachability probe for one Matter node."""
+    """Perform read reachability probes for one Matter node."""
 
     def __init__(
         self,
@@ -152,6 +167,7 @@ class MatterProbeRunner:
         get_attribute_keys: Callable[[int], frozenset[str] | None],
         is_connected: Callable[[], bool],
         persist_node: Callable[[MatterNodeState], Awaitable[None]],
+        planner: MatterProbePlanner | None = None,
     ) -> None:
         self._server_id = server_id
         self._config = config
@@ -162,6 +178,7 @@ class MatterProbeRunner:
         self._get_attribute_keys = get_attribute_keys
         self._is_connected = is_connected
         self._persist_node = persist_node
+        self._planner = planner or MatterProbePlanner()
 
     async def run_manual_probe(
         self,
@@ -171,11 +188,13 @@ class MatterProbeRunner:
         include_ping: bool | None = None,
     ) -> MatterProbeRunResult:
         """Run one read probe (and optional ping) for a single node."""
+        del device_types
         if not self._config.manual_enabled:
             return await self._skip(node_id, "manual probes disabled")
+        if not self._config.probes_active:
+            return await self._skip(node_id, "probes disabled")
         return await self._run_probe_for_node(
             node_id,
-            device_types=device_types,
             include_ping=include_ping,
         )
 
@@ -186,7 +205,7 @@ class MatterProbeRunner:
         include_ping: bool | None = None,
     ) -> MatterProbeRunResult:
         """Run a scheduled read probe when probes are explicitly enabled."""
-        if not self._config.enabled:
+        if not self._config.probes_active:
             return await self._skip(node_id, "probes disabled")
         if not self._config.schedule_enabled:
             return await self._skip(node_id, "scheduled probes disabled")
@@ -196,7 +215,6 @@ class MatterProbeRunner:
         self,
         node_id: int,
         *,
-        device_types: list[str] | None = None,
         include_ping: bool | None = None,
     ) -> MatterProbeRunResult:
         node = self._get_node(node_id)
@@ -209,33 +227,141 @@ class MatterProbeRunner:
         if not node.available:
             return await self._skip(node_id, "node unavailable")
 
-        timeout = self._config.timeout_seconds
-        attribute_path = resolve_read_probe_attribute_path(
+        candidates = self._planner.plan(
+            node,
             attribute_keys=self._get_attribute_keys(node_id),
-            device_types=device_types,
             config=self._config,
         )
+        if not candidates:
+            return await self._skip(node_id, "no probe candidates")
 
-        read_result = await self._run_read_probe(
-            node=node,
-            attribute_path=attribute_path,
-            timeout=timeout,
-        )
+        timeout = self._config.timeout_seconds
+        outcomes = []
+        for candidate in candidates:
+            outcome = await self._attempt_read_probe(
+                node=node,
+                candidate=candidate,
+                timeout=timeout,
+            )
+            outcomes.append(outcome)
+            node = self._get_node(node_id) or node
+
+            if outcome.limited:
+                continue
+            if outcome.ok and _is_generic_candidate(candidate):
+                if self._config.effective_mode == ProbeMode.CONSERVATIVE:
+                    break
+                continue
+            if outcome.ok and candidate.health_weight == "device_specific":
+                break
+            if outcome.ok is False and _is_generic_candidate(candidate):
+                continue
+
+        node = self._get_node(node_id) or node
+        final = self._aggregate_probe_outcomes(node, outcomes)
+        await self._persist_node(final)
 
         ping_attempted = False
         ping_ok: bool | None = None
         should_ping = include_ping if include_ping is not None else self._config.ping_enabled
         if should_ping:
             ping_attempted = True
-            ping_ok = await self._run_ping(node=node, timeout=timeout)
+            ping_ok = await self._run_ping(node=final, timeout=timeout)
 
         return MatterProbeRunResult(
             node_id=node_id,
             read_probe_attempted=True,
-            read_probe_ok=read_result,
+            read_probe_ok=final.last_read_probe_ok,
             ping_attempted=ping_attempted,
             ping_ok=ping_ok,
         )
+
+    def _aggregate_probe_outcomes(
+        self,
+        node: MatterNodeState,
+        outcomes: list[_ProbeAttemptOutcome],
+    ) -> MatterNodeState:
+        if not outcomes:
+            return node
+
+        generic_success = next(
+            (
+                outcome
+                for outcome in outcomes
+                if outcome.ok is True and _is_generic_candidate(outcome.candidate)
+            ),
+            None,
+        )
+        generic_failure = next(
+            (
+                outcome
+                for outcome in outcomes
+                if outcome.ok is False and _is_generic_candidate(outcome.candidate)
+            ),
+            None,
+        )
+        device_specific_unsupported = any(
+            outcome.limited and outcome.candidate.health_weight == "device_specific"
+            for outcome in outcomes
+        )
+        device_specific_failure = next(
+            (
+                outcome
+                for outcome in outcomes
+                if outcome.ok is False and outcome.candidate.health_weight == "device_specific"
+            ),
+            None,
+        )
+
+        final_outcome = outcomes[-1]
+        if generic_success is not None:
+            final_outcome = generic_success
+            last_ok: bool | None = True
+            limited = device_specific_unsupported
+            note = None
+            if device_specific_unsupported:
+                note = "A more specific device read check was not supported by this device."
+            elif device_specific_failure is not None:
+                note = (
+                    "Generic read checks succeeded, but a more specific device read "
+                    "check did not receive a successful response."
+                )
+        elif generic_failure is not None:
+            final_outcome = generic_failure
+            last_ok = False
+            limited = False
+            note = None
+        else:
+            last_ok = None if final_outcome.limited else final_outcome.ok
+            limited = final_outcome.limited
+            note = (
+                "Read diagnostics are limited for this node (unsupported attribute path)."
+                if limited
+                else None
+            )
+
+        unsupported_paths = list(node.last_unsupported_probe_paths or [])
+        for outcome in outcomes:
+            if outcome.limited and outcome.candidate.attribute_path not in unsupported_paths:
+                unsupported_paths.append(outcome.candidate.attribute_path)
+
+        update: dict[str, Any] = {
+            "last_read_probe_ok": last_ok,
+            "last_read_probe_limited": limited,
+            "last_read_probe_attribute_path": final_outcome.candidate.attribute_path,
+            "last_read_probe_duration_ms": final_outcome.command_result.duration_ms,
+            "last_read_probe_error_code": (
+                None if last_ok is True or limited else final_outcome.command_result.error_code
+            ),
+            "last_probe_label": final_outcome.candidate.label,
+            "last_unsupported_probe_paths": unsupported_paths or None,
+            "last_read_probe_note": note,
+        }
+        if last_ok is True:
+            update["last_successful_probe_kind"] = final_outcome.candidate.kind
+            update["last_successful_probe_path"] = final_outcome.candidate.attribute_path
+
+        return node.model_copy(update=update)
 
     async def _skip(self, node_id: int, reason: str) -> MatterProbeRunResult:
         await self._emit_event(
@@ -251,17 +377,17 @@ class MatterProbeRunner:
         )
         return MatterProbeRunResult(node_id=node_id, skipped=True, skip_reason=reason)
 
-    async def _run_read_probe(
+    async def _attempt_read_probe(
         self,
         *,
         node: MatterNodeState,
-        attribute_path: str,
+        candidate: ProbeCandidate,
         timeout: float,
-    ) -> bool:
+    ) -> _ProbeAttemptOutcome:
         now = utc_now()
         command_result = await self._request_command(
             "read_attribute",
-            {"node_id": node.node_id, "attribute_path": attribute_path},
+            {"node_id": node.node_id, "attribute_path": candidate.attribute_path},
             timeout=timeout,
         )
 
@@ -270,7 +396,7 @@ class MatterProbeRunner:
             event_type = READ_PROBE_TIMED_OUT
             message = f"Read probe timed out for Matter node {node.node_id} on {self._server_id}"
             severity = EventSeverity.WARNING
-            ok = False
+            ok: bool | None = False
         elif command_result.ok:
             event_type = READ_PROBE_SUCCEEDED
             message = f"Read probe succeeded for Matter node {node.node_id} on {self._server_id}"
@@ -280,7 +406,7 @@ class MatterProbeRunner:
             event_type = READ_PROBE_UNSUPPORTED
             message = f"Read probe unsupported for Matter node {node.node_id} on {self._server_id}"
             severity = EventSeverity.WARNING
-            ok = False
+            ok = None
             limited = True
         else:
             event_type = READ_PROBE_FAILED
@@ -299,20 +425,16 @@ class MatterProbeRunner:
             event_types=READ_PROBE_SUCCESS_EVENT_TYPES,
             since=since,
         )
-        if ok:
+        counts_generic_failure = ok is False and _is_generic_candidate(candidate)
+        if ok is True:
             successes_24h += 1
-        elif not limited:
+        elif counts_generic_failure:
             failures_24h += 1
 
         updated = node.model_copy(
             update={
                 "read_probe_diagnostics_available": True,
                 "last_read_probe_at": now,
-                "last_read_probe_ok": None if limited else ok,
-                "last_read_probe_limited": limited,
-                "last_read_probe_attribute_path": attribute_path,
-                "last_read_probe_duration_ms": command_result.duration_ms,
-                "last_read_probe_error_code": None if ok or limited else command_result.error_code,
                 "read_probe_failures_24h": failures_24h,
                 "read_probe_successes_24h": successes_24h,
             }
@@ -327,13 +449,20 @@ class MatterProbeRunner:
             data={
                 "node_id": node.node_id,
                 "probe_type": "read_attribute",
-                "attribute_path": attribute_path,
+                "probe_kind": candidate.kind,
+                "probe_label": candidate.label,
+                "attribute_path": candidate.attribute_path,
                 "duration_ms": command_result.duration_ms,
                 "error_code": command_result.error_code,
                 "error_summary": _error_summary(command_result),
             },
         )
-        return ok
+        return _ProbeAttemptOutcome(
+            ok=ok,
+            limited=limited,
+            candidate=candidate,
+            command_result=command_result,
+        )
 
     async def _run_ping(self, *, node: MatterNodeState, timeout: float) -> bool:
         now = utc_now()
