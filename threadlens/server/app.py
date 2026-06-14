@@ -114,6 +114,7 @@ def create_server_app(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> 
   <h1>ThreadLens</h1>
   <p>ThreadLens is running (v{__version__}).</p>
   <ul>
+    <li><a href="/api/v1/dashboard">/api/v1/dashboard</a></li>
     <li><a href="/api/v1/health">/api/v1/health</a></li>
     <li><a href="/api/v1/status">/api/v1/status</a></li>
     <li><a href="/api/v1/capabilities">/api/v1/capabilities</a></li>
