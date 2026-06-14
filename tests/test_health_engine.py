@@ -802,6 +802,115 @@ async def test_post_baseline_mdns_readd_counts_as_flap(tmp_path: Path) -> None:
     assert "mdns_service_flapping_degraded" in report.mdns.reasons
 
 
+@pytest.mark.asyncio
+async def test_mdns_service_changed_burst_does_not_degrade_health(tmp_path: Path) -> None:
+    ctx = await _make_running_mdns_context(
+        tmp_path,
+        db_name="mdns-change-only.db",
+        flap_config=FlappingConfig(
+            debounce_seconds=0,
+            mdns_service_flaps_warning_1h=5,
+            mdns_service_flaps_degraded_1h=15,
+        ),
+    )
+    now = utc_now()
+    for index in range(20):
+        await ctx.repository.insert_event(
+            Event(
+                id=str(uuid.uuid4()),
+                timestamp=now,
+                source_type=EventSourceType.MDNS,
+                source_id="mdns",
+                event_type="mdns.service_changed",
+                severity=EventSeverity.INFO,
+                subject_type=EventSubjectType.MDNS_SERVICE,
+                subject_id=f"mdns:service:{index}",
+                message=f"mDNS service changed {index}",
+                data={"initial_observation": False},
+            )
+        )
+
+    report = await HealthEngine(ctx).build_report(version="0.1.0", mode="server")
+    assert report.mdns.state == HealthState.HEALTHY
+    assert "mdns_service_flapping_warning" not in report.mdns.reasons
+    assert "mdns_service_flapping_degraded" not in report.mdns.reasons
+
+
+@pytest.mark.asyncio
+async def test_trel_service_changed_burst_does_not_degrade_trel_health(tmp_path: Path) -> None:
+    ctx = await _make_running_mdns_context(
+        tmp_path,
+        db_name="trel-change-only.db",
+        flap_config=FlappingConfig(
+            debounce_seconds=0,
+            mdns_service_flaps_warning_1h=5,
+            mdns_service_flaps_degraded_1h=15,
+        ),
+    )
+    now = utc_now()
+    for index in range(20):
+        await ctx.repository.insert_event(
+            Event(
+                id=str(uuid.uuid4()),
+                timestamp=now,
+                source_type=EventSourceType.MDNS,
+                source_id="mdns",
+                event_type="trel.service_changed",
+                severity=EventSeverity.INFO,
+                subject_type=EventSubjectType.TREL_SERVICE,
+                subject_id=f"trel:service:{index}",
+                message=f"TREL service changed {index}",
+                data={"initial_observation": False},
+            )
+        )
+
+    report = await HealthEngine(ctx).build_report(version="0.1.0", mode="server")
+    assert "mdns_service_flapping_degraded" not in report.trel.reasons
+    assert "mdns_service_flapping_warning" not in report.trel.reasons
+
+
+@pytest.mark.asyncio
+async def test_foreign_trel_services_still_warn_when_change_events_dominate(
+    tmp_path: Path,
+) -> None:
+    ctx = await _make_running_mdns_context(
+        tmp_path,
+        db_name="trel-foreign-warning.db",
+        flap_config=FlappingConfig(debounce_seconds=0),
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.TREL_SERVICE,
+        "trel:foreign-1",
+        TrelServiceState(
+            service_id="trel:foreign-1",
+            instance_name="foreign-trel._trel._udp.local.",
+            ext_pan_id="aabbccddeeff0011",
+            is_foreign=True,
+            currently_visible=True,
+        ),
+    )
+    now = utc_now()
+    await ctx.repository.insert_event(
+        Event(
+            id=str(uuid.uuid4()),
+            timestamp=now,
+            source_type=EventSourceType.MDNS,
+            source_id="mdns",
+            event_type="trel.service_changed",
+            severity=EventSeverity.INFO,
+            subject_type=EventSubjectType.TREL_SERVICE,
+            subject_id="trel:foreign-1",
+            message="TREL service changed",
+            data={"initial_observation": False},
+        )
+    )
+
+    report = await HealthEngine(ctx).build_report(version="0.1.0", mode="server")
+    assert report.trel.state == HealthState.WARNING
+    assert "foreign_trel_services_observed" in report.trel.reasons
+    assert "mdns_service_flapping_degraded" not in report.trel.reasons
+
+
 def test_health_api_returns_structured_sections(tmp_path: Path) -> None:
     config = ThreadLensConfig(
         storage={"sqlite_path": str(tmp_path / "health-api.db")},

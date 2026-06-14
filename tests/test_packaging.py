@@ -22,15 +22,19 @@ DOCKERFILE = REPO_ROOT / "Dockerfile"
 
 def test_examples_config_validates() -> None:
     config = load_config(EXAMPLES_CONFIG)
-    assert config.site.name == "Home"
+    assert config.site.name == "My ThreadLens Site"
     assert config.server.port == 8128
     assert config.agent.port == 8129
-    assert config.mqtt.enabled is False
+    assert config.mqtt.enabled is True
+    assert config.mqtt.username is None
+    assert config.mqtt.password is None
     assert config.mdns.enabled is True
     assert config.reports.redact_secrets is True
     assert config.homeassistant.mqtt_discovery_enabled is True
-    assert config.otbrs == []
-    assert config.matter_servers == []
+    assert len(config.otbrs) == 2
+    assert config.otbrs[0].rest_url == "http://192.168.1.10:8081"
+    assert len(config.matter_servers) == 1
+    assert config.otbr.use_legacy_node_fallback is True
 
 
 def test_docker_compose_bridge_ports_and_paths() -> None:

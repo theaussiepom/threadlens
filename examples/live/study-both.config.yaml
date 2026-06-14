@@ -1,9 +1,9 @@
-# ThreadLens 0.1.1 — Study Pi (192.168.100.4) both-mode live test config.
-# Copy to the Study Pi and mount at /config/config.yaml.
-# Set MQTT broker host and credentials locally. Do not commit passwords to git.
+# ThreadLens both-mode example (server + agent in one container).
+# Copy to your host and mount at /config/config.yaml.
+# Set MQTT broker host and credentials in your local copy only — never commit secrets.
 
 site:
-  name: "Ben Home"
+  name: "My ThreadLens Site"
 
 mode: both
 
@@ -28,8 +28,7 @@ otbr:
   allow_read_only_actions: false
   use_legacy_node_fallback: true
 
-# MQTT broker hostname (Home Assistant Mosquitto add-on or equivalent).
-# Set username/password in your local copy only — never commit broker secrets.
+# Replace broker.mqtt with your MQTT broker hostname or IP if needed.
 mqtt:
   enabled: true
   host: "broker.mqtt"
@@ -53,14 +52,14 @@ mdns:
     - "_matterc._udp.local."
 
 otbrs:
-  - id: study
-    name: Study OTBR
-    rest_url: http://192.168.100.4:8081
-    agent_url: http://192.168.100.4:8129
-  - id: lounge
-    name: Lounge OTBR
-    rest_url: http://192.168.100.7:8081
-    agent_url: http://192.168.100.7:8129
+  - id: "primary"
+    name: "Primary OTBR"
+    rest_url: "http://192.168.1.10:8081"
+    agent_url: "http://192.168.1.10:8129"
+  - id: "secondary"
+    name: "Secondary OTBR"
+    rest_url: "http://192.168.1.11:8081"
+    agent_url: null
 
 matter:
   reconnect_initial_seconds: 5
@@ -68,10 +67,10 @@ matter:
   request_timeout_seconds: 10
 
 matter_servers:
-  - id: study_matter
-    name: Study Matter Server
-    websocket_url: ws://192.168.100.4:5580/ws
-    variant: python
+  - id: "home"
+    name: "Home Matter Server"
+    websocket_url: "ws://192.168.1.10:5580/ws"
+    variant: "python"
 
 reports:
   redact_secrets: true

@@ -30,7 +30,7 @@ def test_load_example_config() -> None:
     assert config.mqtt.per_trel_service_entities is False
     assert config.mqtt.per_node_entities is True
     assert len(config.otbrs) == 1
-    assert config.otbrs[0].id == "study"
+    assert config.otbrs[0].id == "primary"
     assert len(config.matter_servers) == 1
     assert config.matter_servers[0].variant == MatterServerVariant.PYTHON
     assert config.homeassistant.mqtt_discovery_enabled is True
@@ -60,7 +60,7 @@ def test_env_override_site_name(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_env_override_config_path(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("THREADLENS_CONFIG_PATH", str(EXAMPLE_CONFIG))
     config = load_config()
-    assert config.otbrs[0].name == "Study OTBR"
+    assert config.otbrs[0].name == "Primary OTBR"
 
 
 def test_invalid_mode_fails_validation() -> None:

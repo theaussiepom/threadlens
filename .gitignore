@@ -8,6 +8,7 @@ build/
 .ruff_cache/
 .mypy_cache/
 .env
+.env.*
 .venv/
 venv/
 data/
@@ -17,5 +18,8 @@ db-backups/
 agent-tools/
 mcps/
 terminals/
+*.local.yaml
+*.secret.yaml
+*.secrets.yaml
 examples/live/*.local.yaml
 examples/live/*-secrets.yaml

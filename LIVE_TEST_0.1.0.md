@@ -67,7 +67,7 @@ otbrs:
 Before starting containers:
 
 - [ ] **Docker** running on both Pis (Linux; host networking required for reliable mDNS/TREL)
-- [ ] **Core image** available on both Pis: `ghcr.io/theaussiepom/threadlens:0.1.1` (pull from GHCR after release tag)
+- [ ] **Core image** available on both Pis: `ghcr.io/theaussiepom/threadlens:0.1.2` (pull from GHCR after release tag)
 - [ ] **Network reachability** between `.4` and `.7` on the LAN
 - [ ] **OTBR REST** reachable: `curl http://192.168.100.4:8081/node/state` and `curl http://192.168.100.7:8081/node/state` (or equivalent OTBR health endpoint)
 - [ ] **Matter Server** reachable: websocket at `ws://192.168.100.4:5580/ws`

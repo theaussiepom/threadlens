@@ -1,8 +1,8 @@
-# ThreadLens 0.1.0 — Lounge Pi (192.168.100.7) agent-only live test config.
-# Copy to the Lounge Pi and mount at /config/config.yaml.
+# ThreadLens agent-only example for a co-located diagnostics endpoint.
+# Copy to your host and mount at /config/config.yaml.
 
 site:
-  name: "Ben Home"
+  name: "My ThreadLens Site"
 
 mode: agent
 

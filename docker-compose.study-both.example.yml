@@ -1,19 +1,20 @@
-# ThreadLens 0.1.1 — Study Pi (192.168.100.4) live test
+# ThreadLens both-mode example (server + agent)
 #
-# Runs server + agent (both mode) with host networking for mDNS/TREL.
+# Published image with host networking for mDNS/TREL on Linux.
 # Requires Linux host networking. Do not use ports: with network_mode: host.
 #
 # Before starting:
-#   1. Copy examples/live/study-both.config.yaml to a local secrets file if needed
-#   2. Set MQTT broker host and credentials (do not commit passwords)
+#   1. Copy examples/live/study-both.config.yaml to a local file if you need MQTT secrets
+#   2. Set MQTT broker host and credentials in your local copy (do not commit passwords)
 #   3. mkdir -p data/study
 #
 # Usage:
+#   docker pull ghcr.io/theaussiepom/threadlens:0.1.2
 #   docker compose -f docker-compose.study-both.example.yml up -d
 
 services:
   threadlens:
-    image: ghcr.io/theaussiepom/threadlens:0.1.1
+    image: ghcr.io/theaussiepom/threadlens:0.1.2
     container_name: threadlens
     restart: unless-stopped
     network_mode: host
@@ -22,5 +23,5 @@ services:
       - ./examples/live/study-both.config.yaml:/config/config.yaml:ro
       - ./data/study:/data
     environment:
-      TZ: Australia/Brisbane
+      TZ: UTC
       THREADLENS_CONFIG_PATH: /config/config.yaml
