@@ -589,6 +589,51 @@ async def test_subscription_diagnostics_unavailable_does_not_degrade_health(
 
 
 @pytest.mark.asyncio
+async def test_matter_node_health_unchanged_when_read_probe_fields_present(
+    health_context,
+    tmp_path: Path,
+) -> None:
+    ctx = await health_context(
+        config=ThreadLensConfig(
+            storage={"sqlite_path": str(tmp_path / "probe-health.db")},
+            mdns=MdnsConfig(enabled=False),
+        )
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_SERVER,
+        "study_matter",
+        MatterServerState(
+            id="study_matter",
+            name="Study",
+            connected=True,
+            capabilities=MatterServerCapabilities(
+                node_inventory_available=True,
+                node_availability_available=True,
+            ),
+        ),
+    )
+    await ctx.repository.upsert_model_state(
+        CurrentStateType.MATTER_NODE,
+        "matter_node:study_matter:24",
+        MatterNodeState(
+            node_id=24,
+            server_id="study_matter",
+            available=True,
+            availability_flaps_24h=0,
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=False,
+            read_probe_failures_24h=12,
+            read_probe_successes_24h=0,
+        ),
+    )
+
+    report = await HealthEngine(ctx).build_report(version="0.1.0", mode="server")
+    node = report.matter_nodes[0]
+    assert node.state == HealthState.HEALTHY
+    assert "read_probe" not in " ".join(node.reasons)
+
+
+@pytest.mark.asyncio
 async def test_mdns_enabled_observer_not_running_warning(health_context, tmp_path: Path) -> None:
     ctx = await health_context(
         config=ThreadLensConfig(

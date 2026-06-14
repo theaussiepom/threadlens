@@ -148,3 +148,16 @@ class MatterNodeState(BaseModel):
     command_diagnostics_available: bool = False
     case_failures_24h: int | None = None
     command_failures_24h: int | None = None
+    read_probe_diagnostics_available: bool = False
+    last_read_probe_at: datetime | None = None
+    last_read_probe_ok: bool | None = None
+    last_read_probe_attribute_path: str | None = None
+    last_read_probe_duration_ms: int | None = None
+    last_read_probe_error_code: int | str | None = None
+    read_probe_failures_24h: int | None = None
+    read_probe_successes_24h: int | None = None
+    ping_diagnostics_available: bool = False
+    last_ping_at: datetime | None = None
+    last_ping_ok: bool | None = None
+    ping_failures_24h: int | None = None
+    ping_successes_24h: int | None = None
