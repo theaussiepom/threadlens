@@ -687,16 +687,37 @@ code {
   font-size: 0.85em;
 }
 
-/* ---------- Infra sections (column flow on desktop) ---------- */
+/* ---------- Infra sections (independent flex columns on desktop) ---------- */
 
-.tl-infra-grid {
+.tl-infra-layout {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.tl-infra-grid > * {
-  margin-bottom: 0;
+/* Mobile: flatten column wrappers and preserve original card order. */
+.tl-infra-col {
+  display: contents;
+}
+
+.tl-infra-slot-otbr {
+  order: 1;
+}
+
+.tl-infra-slot-matter {
+  order: 2;
+}
+
+.tl-infra-slot-networks {
+  order: 3;
+}
+
+.tl-infra-slot-mdns {
+  order: 4;
+}
+
+.tl-infra-slot-mqtt {
+  order: 5;
 }
 
 /* ---------- State views ---------- */
@@ -952,16 +973,27 @@ code {
     font-size: 1.25rem;
   }
 
-  /* Column flow: cards stack independently per column without row-height gaps. */
-  .tl-infra-grid {
-    display: block;
-    columns: 2;
-    column-gap: 16px;
+  /* Independent flex columns: each side stacks without row-height coupling. */
+  .tl-infra-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
   }
 
-  .tl-infra-grid > * {
-    break-inside: avoid;
-    margin-bottom: 16px;
+  .tl-infra-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .tl-infra-slot-otbr,
+  .tl-infra-slot-matter,
+  .tl-infra-slot-networks,
+  .tl-infra-slot-mdns,
+  .tl-infra-slot-mqtt {
+    order: unset;
   }
 
   /* Node drilldown becomes a centered side panel rather than a bottom sheet. */
@@ -990,9 +1022,8 @@ code {
 }
 
 @media (min-width: 1280px) {
-  .tl-infra-grid {
-    columns: 3;
-    column-gap: 16px;
+  .tl-infra-layout {
+    gap: 20px;
   }
 }
 

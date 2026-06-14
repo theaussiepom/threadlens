@@ -61,12 +61,26 @@ export default function App() {
               onSelect={(node) => setSelectedNodeId(node.subject_id)}
             />
 
-            <div className="tl-infra-grid">
-              <OtbrSection otbrs={data.otbrs} />
-              <MatterServerSection matter={data.matter} />
-              <NetworksSection networks={data.networks} />
-              <MdnsTrelSection mdns={data.mdns} trel={data.trel} />
-              <MqttSectionView mqtt={data.mqtt} />
+            <div className="tl-infra-layout">
+              <div className="tl-infra-col">
+                <div className="tl-infra-slot tl-infra-slot-otbr">
+                  <OtbrSection otbrs={data.otbrs} />
+                </div>
+                <div className="tl-infra-slot tl-infra-slot-networks">
+                  <NetworksSection networks={data.networks} />
+                </div>
+                <div className="tl-infra-slot tl-infra-slot-mqtt">
+                  <MqttSectionView mqtt={data.mqtt} />
+                </div>
+              </div>
+              <div className="tl-infra-col">
+                <div className="tl-infra-slot tl-infra-slot-matter">
+                  <MatterServerSection matter={data.matter} />
+                </div>
+                <div className="tl-infra-slot tl-infra-slot-mdns">
+                  <MdnsTrelSection mdns={data.mdns} trel={data.trel} />
+                </div>
+              </div>
             </div>
 
             <Reports report={data.report} />

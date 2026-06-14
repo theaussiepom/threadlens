@@ -103,16 +103,20 @@ def test_source_is_mobile_first_responsive() -> None:
     assert "min-width: 960px" in css
 
 
-def test_source_infra_sections_use_column_flow_on_desktop() -> None:
+def test_source_infra_sections_use_independent_flex_columns_on_desktop() -> None:
     css = (WEB_SRC / "styles" / "app.css").read_text(encoding="utf-8")
-    assert ".tl-infra-grid" in css
-    # Mobile: single-column stack.
-    assert "flex-direction: column" in css
-    # Desktop: multi-column flow avoids row-major grid height gaps.
-    assert "columns: 2" in css
-    assert "columns: 3" in css
-    assert "break-inside: avoid" in css
+    app = (WEB_SRC / "App.tsx").read_text(encoding="utf-8")
+    assert ".tl-infra-layout" in css
+    assert ".tl-infra-col" in css
+    assert "tl-infra-layout" in app
+    assert "tl-infra-col" in app
+    # Mobile: single-column order preserved via display:contents + order.
+    assert "display: contents" in css
+    assert "order: 1" in css
+    # Desktop: side-by-side flex columns without row-major grid gaps.
+    assert "flex-direction: row" in css
     assert "grid-template-columns: repeat(2, minmax(0, 1fr))" not in css
+    assert "columns: 2" not in css
 
 
 # ---- Built-output checks (run only when the dashboard has been built) ----
