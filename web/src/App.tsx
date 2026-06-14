@@ -12,6 +12,7 @@ import {
   MqttSectionView,
   NetworksSection,
 } from "./components/InfraSections";
+import { InfraColumnLayout } from "./components/InfraColumnLayout";
 import { Reports } from "./components/Reports";
 import { Diagnostics } from "./components/Diagnostics";
 import { ErrorState, LoadingState, StaleBanner } from "./components/StateViews";
@@ -61,29 +62,29 @@ export default function App() {
               onSelect={(node) => setSelectedNodeId(node.subject_id)}
             />
 
-            <div className="tl-infra-layout">
-              <div className="tl-infra-col">
-                <div className="tl-infra-slot tl-infra-slot-otbr">
-                  <OtbrSection otbrs={data.otbrs} />
-                </div>
-                <div className="tl-infra-slot tl-infra-slot-networks">
-                  <NetworksSection networks={data.networks} />
-                </div>
-                <div className="tl-infra-slot tl-infra-slot-mqtt">
-                  <MqttSectionView mqtt={data.mqtt} />
-                </div>
-              </div>
-              <div className="tl-infra-col">
-                <div className="tl-infra-slot tl-infra-slot-matter">
-                  <MatterServerSection matter={data.matter} />
-                </div>
-                <div className="tl-infra-slot tl-infra-slot-mdns">
-                  <MdnsTrelSection mdns={data.mdns} trel={data.trel} />
-                </div>
-              </div>
-            </div>
+            <InfraColumnLayout
+              items={[
+                { id: "otbr", mobileOrder: 1, node: <OtbrSection otbrs={data.otbrs} /> },
+                {
+                  id: "matter",
+                  mobileOrder: 2,
+                  node: <MatterServerSection matter={data.matter} />,
+                },
+                {
+                  id: "networks",
+                  mobileOrder: 3,
+                  node: <NetworksSection networks={data.networks} />,
+                },
+                {
+                  id: "mdns",
+                  mobileOrder: 4,
+                  node: <MdnsTrelSection mdns={data.mdns} trel={data.trel} />,
+                },
+                { id: "mqtt", mobileOrder: 5, node: <MqttSectionView mqtt={data.mqtt} /> },
+                { id: "reports", mobileOrder: 6, node: <Reports report={data.report} /> },
+              ]}
+            />
 
-            <Reports report={data.report} />
             <Diagnostics data={data} />
           </>
         )}

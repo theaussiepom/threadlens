@@ -103,20 +103,26 @@ def test_source_is_mobile_first_responsive() -> None:
     assert "min-width: 960px" in css
 
 
-def test_source_infra_sections_use_independent_flex_columns_on_desktop() -> None:
+def test_source_infra_sections_use_balanced_flex_columns_on_desktop() -> None:
     css = (WEB_SRC / "styles" / "app.css").read_text(encoding="utf-8")
     app = (WEB_SRC / "App.tsx").read_text(encoding="utf-8")
     assert ".tl-infra-layout" in css
     assert ".tl-infra-col" in css
-    assert "tl-infra-layout" in app
-    assert "tl-infra-col" in app
-    # Mobile: single-column order preserved via display:contents + order.
-    assert "display: contents" in css
-    assert "order: 1" in css
-    # Desktop: side-by-side flex columns without row-major grid gaps.
+    assert ".tl-infra-measure" in css
+    assert "InfraColumnLayout" in app
+    assert 'id: "reports"' in app
+    balance_src = (WEB_SRC / "utils" / "balanceColumns.ts").read_text(encoding="utf-8")
+    assert "balanceIntoTwoColumns" in balance_src
     assert "flex-direction: row" in css
     assert "grid-template-columns: repeat(2, minmax(0, 1fr))" not in css
     assert "columns: 2" not in css
+
+
+def test_reports_card_is_compact() -> None:
+    reports = (WEB_SRC / "components" / "Reports.tsx").read_text(encoding="utf-8")
+    assert "tl-card-compact" in reports
+    assert "tl-btn-small" in reports
+    assert "KeyValue" in reports
 
 
 # ---- Built-output checks (run only when the dashboard has been built) ----
