@@ -16,5 +16,6 @@ live-captures/
 db-backups/
 agent-tools/
 mcps/
+terminals/
 examples/live/*.local.yaml
 examples/live/*-secrets.yaml

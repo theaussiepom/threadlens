@@ -1,7 +1,0 @@
----
-pid: 99123
-cwd: "/Users/bennis/.cursor/projects/var-folders-8z-16zqglvd5hxf9nblkk9knhgr0000gn-T-48a9087e-e290-48fb-932a-d597364f784b"
-command: "cd \"/Users/bennis/.cursor/projects/var-folders-8z-16zqglvd5hxf9nblkk9knhgr0000gn-T-48a9087e-e290-48fb-932a-d597364f784b\" && pytest -xvs tests/test_health_engine.py::test_post_baseline_mdns_readd_counts_as_flap 2>&1 | tail -30"
-started_at: 2026-06-14T01:08:34.534Z
-running_for_ms: 4731926  
----
