@@ -687,12 +687,16 @@ code {
   font-size: 0.85em;
 }
 
-/* ---------- Infra grid ---------- */
+/* ---------- Infra sections (column flow on desktop) ---------- */
 
 .tl-infra-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+}
+
+.tl-infra-grid > * {
+  margin-bottom: 0;
 }
 
 /* ---------- State views ---------- */
@@ -948,9 +952,16 @@ code {
     font-size: 1.25rem;
   }
 
+  /* Column flow: cards stack independently per column without row-height gaps. */
   .tl-infra-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+    display: block;
+    columns: 2;
+    column-gap: 16px;
+  }
+
+  .tl-infra-grid > * {
+    break-inside: avoid;
+    margin-bottom: 16px;
   }
 
   /* Node drilldown becomes a centered side panel rather than a bottom sheet. */
@@ -980,7 +991,8 @@ code {
 
 @media (min-width: 1280px) {
   .tl-infra-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    columns: 3;
+    column-gap: 16px;
   }
 }
 
