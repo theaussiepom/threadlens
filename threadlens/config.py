@@ -88,10 +88,32 @@ class OtbrPollingConfig(BaseModel):
     use_legacy_node_fallback: bool = True
 
 
+class MatterProbeAttributesConfig(BaseModel):
+    """Attribute paths used for read reachability probes (endpoint/cluster/attribute)."""
+
+    window_covering: list[str] = Field(default_factory=lambda: ["1/258/10"])
+    fallback: list[str] = Field(default_factory=lambda: ["0/40/5"])
+
+
+class MatterProbeConfig(BaseModel):
+    """Conservative defaults for Matter read reachability probes (read-only)."""
+
+    enabled: bool = False
+    manual_enabled: bool = True
+    schedule_enabled: bool = False
+    interval_seconds: int = Field(default=3600, ge=60)
+    timeout_seconds: float = Field(default=10.0, gt=0)
+    max_concurrent: int = Field(default=1, ge=1)
+    jitter_seconds: int = Field(default=300, ge=0)
+    ping_enabled: bool = False
+    attributes: MatterProbeAttributesConfig = Field(default_factory=MatterProbeAttributesConfig)
+
+
 class MatterPollingConfig(BaseModel):
     reconnect_initial_seconds: float = Field(default=5.0, gt=0)
     reconnect_max_seconds: float = Field(default=60.0, gt=0)
     request_timeout_seconds: float = Field(default=10.0, gt=0)
+    probes: MatterProbeConfig = Field(default_factory=MatterProbeConfig)
 
 
 class OtbrConfig(BaseModel):

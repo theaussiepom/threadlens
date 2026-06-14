@@ -299,6 +299,9 @@ async def test_subscription_diagnostics_unavailable(observer_factory) -> None:
     assert state.subscription_diagnostics_available is False
     assert state.case_diagnostics_available is False
     assert state.command_diagnostics_available is False
+    assert state.read_probe_diagnostics_available is False
+    assert state.last_read_probe_ok is None
+    assert state.ping_diagnostics_available is False
 
 
 @pytest.mark.asyncio

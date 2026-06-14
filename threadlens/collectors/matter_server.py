@@ -21,7 +21,8 @@ from datetime import datetime, timedelta
 from typing import Any, Protocol
 
 from threadlens.collectors.matter_parse import parse_matter_node
-from threadlens.collectors.matter_ws import MatterWebsocketRequestManager
+from threadlens.collectors.matter_probes import MatterProbeRunner, MatterProbeRunResult
+from threadlens.collectors.matter_ws import MatterCommandResult, MatterWebsocketRequestManager
 from threadlens.config import MatterServerConfig, ThreadLensConfig
 from threadlens.models.capabilities import MatterServerCapabilities
 from threadlens.models.events import Event, EventSeverity, EventSourceType, EventSubjectType
@@ -113,6 +114,8 @@ class MatterServerObserver:
         self._capabilities = MatterServerCapabilities(variant=str(server_config.variant))
         self.sent_commands: list[str] = []
         self._requests = MatterWebsocketRequestManager()
+        self._websocket: WebsocketLike | None = None
+        self._node_attribute_keys: dict[int, frozenset[str]] = {}
 
     @property
     def server_id(self) -> str:
@@ -169,14 +172,73 @@ class MatterServerObserver:
     async def _session(self) -> None:
         connect = self._connect or _default_connect
         async with connect(self._server_config.websocket_url) as websocket:
-            await self._on_connected()
-            await self._send_command(websocket, "start_listening")
-            async for raw in websocket:
-                payload = _decode_message(raw)
-                if payload is None:
-                    continue
-                await self._handle_message(payload)
+            self._websocket = websocket
+            try:
+                await self._on_connected()
+                await self._send_command(websocket, "start_listening")
+                async for raw in websocket:
+                    payload = _decode_message(raw)
+                    if payload is None:
+                        continue
+                    await self._handle_message(payload)
+            finally:
+                self._websocket = None
         await self._on_disconnected("connection closed")
+
+    async def _request_command(
+        self,
+        command: str,
+        args: dict[str, Any],
+        *,
+        timeout: float | None = None,
+    ) -> MatterCommandResult:
+        """Send an allowlisted command and wait for a correlated response."""
+        if command not in ALLOWED_COMMANDS:
+            raise ValueError(f"Refusing to send non-allowlisted command: {command!r}")
+        websocket = self._websocket
+        if websocket is None:
+            return MatterCommandResult(ok=False, details="websocket not connected")
+        probe_timeout = timeout or self._config.matter.probes.timeout_seconds
+        message_id = uuid.uuid4().hex
+        self._requests.register(message_id)
+        self.sent_commands.append(command)
+        await websocket.send(
+            json.dumps(
+                {
+                    "message_id": message_id,
+                    "command": command,
+                    "args": args,
+                }
+            )
+        )
+        return await self._requests.wait_for(message_id, timeout=probe_timeout)
+
+    def _probe_runner(self) -> MatterProbeRunner:
+        return MatterProbeRunner(
+            server_id=self.server_id,
+            config=self._config.matter.probes,
+            request_command=self._request_command,
+            emit_event=self._emit_node_event,
+            count_events=self._count_node_events,
+            get_node=self._nodes.get,
+            get_attribute_keys=self._node_attribute_keys.get,
+            is_connected=lambda: self._websocket is not None and self.connected,
+            persist_node=self._persist_node_state,
+        )
+
+    async def run_manual_read_probe(
+        self,
+        node_id: int,
+        *,
+        device_types: list[str] | None = None,
+        include_ping: bool | None = None,
+    ) -> MatterProbeRunResult:
+        """Internal/manual read reachability probe for a single node."""
+        return await self._probe_runner().run_manual_probe(
+            node_id,
+            device_types=device_types,
+            include_ping=include_ping,
+        )
 
     async def _send_command(
         self,
@@ -328,6 +390,10 @@ class MatterServerObserver:
 
         availability_flaps_24h = await self._count_availability_flaps(node_id)
 
+        attributes = payload.get("attributes")
+        if isinstance(attributes, dict):
+            self._node_attribute_keys[node_id] = frozenset(str(key) for key in attributes)
+
         state = MatterNodeState(
             node_id=node_id,
             server_id=self.server_id,
@@ -347,6 +413,23 @@ class MatterServerObserver:
             subscription_diagnostics_available=False,
             case_diagnostics_available=False,
             command_diagnostics_available=False,
+            read_probe_diagnostics_available=(
+                existing.read_probe_diagnostics_available if existing else False
+            ),
+            last_read_probe_at=existing.last_read_probe_at if existing else None,
+            last_read_probe_ok=existing.last_read_probe_ok if existing else None,
+            last_read_probe_attribute_path=(
+                existing.last_read_probe_attribute_path if existing else None
+            ),
+            last_read_probe_duration_ms=existing.last_read_probe_duration_ms if existing else None,
+            last_read_probe_error_code=existing.last_read_probe_error_code if existing else None,
+            read_probe_failures_24h=existing.read_probe_failures_24h if existing else None,
+            read_probe_successes_24h=existing.read_probe_successes_24h if existing else None,
+            ping_diagnostics_available=existing.ping_diagnostics_available if existing else False,
+            last_ping_at=existing.last_ping_at if existing else None,
+            last_ping_ok=existing.last_ping_ok if existing else None,
+            ping_failures_24h=existing.ping_failures_24h if existing else None,
+            ping_successes_24h=existing.ping_successes_24h if existing else None,
         )
         self._nodes[node_id] = state
         await self._repository.upsert_model_state(
@@ -365,6 +448,7 @@ class MatterServerObserver:
         if node_id is None or node_id not in self._nodes:
             return
         del self._nodes[node_id]
+        self._node_attribute_keys.pop(node_id, None)
         await self._repository.delete_current_state(
             CurrentStateType.MATTER_NODE,
             _node_subject_id(self.server_id, node_id),
@@ -420,6 +504,32 @@ class MatterServerObserver:
             since=since,
         )
         return len(events)
+
+    async def _count_node_events(
+        self,
+        *,
+        node_id: int,
+        event_types: frozenset[str],
+        since: datetime,
+    ) -> int:
+        total = 0
+        for event_type in event_types:
+            events = await self._repository.get_events(
+                subject_type=EventSubjectType.MATTER_NODE.value,
+                subject_id=_node_subject_id(self.server_id, node_id),
+                event_type=event_type,
+                since=since,
+            )
+            total += len(events)
+        return total
+
+    async def _persist_node_state(self, node: MatterNodeState) -> None:
+        self._nodes[node.node_id] = node
+        await self._repository.upsert_model_state(
+            CurrentStateType.MATTER_NODE,
+            _node_subject_id(self.server_id, node.node_id),
+            node,
+        )
 
     async def _emit_server_event(
         self,

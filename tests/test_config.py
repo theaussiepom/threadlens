@@ -51,6 +51,17 @@ def test_load_config_with_defaults() -> None:
     assert config.homeassistant.mqtt_discovery_enabled is True
 
 
+def test_matter_probe_config_defaults() -> None:
+    config = ThreadLensConfig()
+    probes = config.matter.probes
+    assert probes.enabled is False
+    assert probes.schedule_enabled is False
+    assert probes.manual_enabled is True
+    assert probes.timeout_seconds == 10.0
+    assert probes.max_concurrent == 1
+    assert probes.attributes.fallback == ["0/40/5"]
+
+
 def test_env_override_site_name(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("THREADLENS_SITE_NAME", "Lab")
     config = load_config(EXAMPLE_CONFIG)
