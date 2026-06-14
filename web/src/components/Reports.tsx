@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReportSection } from "../api/types";
 import { REPORT_JSON_PATH, REPORT_YAML_PATH, resolveUrl } from "../api/paths";
 import { fmtTime } from "../utils/format";
-import { Card } from "./primitives";
+import { Card, KeyValue } from "./primitives";
 
 export function Reports({ report }: { report: ReportSection }) {
   const [copied, setCopied] = useState(false);
@@ -20,30 +20,31 @@ export function Reports({ report }: { report: ReportSection }) {
   };
 
   return (
-    <Card title="Reports">
-      <p className="tl-muted">
-        Last generated: {report.last_generated_at ? fmtTime(report.last_generated_at) : "never"}
-      </p>
-      <div className="tl-btn-row">
-        <a className="tl-btn" href={resolveUrl(yamlPath)} target="_blank" rel="noopener">
-          Open YAML report
+    <Card title="Reports" className="tl-card-compact">
+      <KeyValue
+        rows={[
+          {
+            label: "Last generated",
+            value: report.last_generated_at ? fmtTime(report.last_generated_at) : "never",
+          },
+        ]}
+      />
+      <div className="tl-btn-row tl-btn-row-compact">
+        <a className="tl-btn tl-btn-small" href={resolveUrl(yamlPath)} target="_blank" rel="noopener">
+          YAML
         </a>
         <a
-          className="tl-btn tl-btn-secondary"
+          className="tl-btn tl-btn-small tl-btn-secondary"
           href={resolveUrl(jsonPath)}
           target="_blank"
           rel="noopener"
         >
-          Open JSON report
+          JSON
         </a>
-        <button type="button" className="tl-btn tl-btn-secondary" onClick={copyPath}>
+        <button type="button" className="tl-btn tl-btn-small tl-btn-secondary" onClick={copyPath}>
           {copied ? "Copied" : "Copy link"}
         </button>
       </div>
-      <p className="tl-muted tl-note">
-        Reports open directly from ThreadLens Core. They redact secrets but include operational
-        metadata useful for support.
-      </p>
     </Card>
   );
 }

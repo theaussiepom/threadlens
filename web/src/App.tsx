@@ -12,6 +12,7 @@ import {
   MqttSectionView,
   NetworksSection,
 } from "./components/InfraSections";
+import { InfraColumnLayout } from "./components/InfraColumnLayout";
 import { Reports } from "./components/Reports";
 import { Diagnostics } from "./components/Diagnostics";
 import { ErrorState, LoadingState, StaleBanner } from "./components/StateViews";
@@ -61,15 +62,29 @@ export default function App() {
               onSelect={(node) => setSelectedNodeId(node.subject_id)}
             />
 
-            <div className="tl-infra-grid">
-              <OtbrSection otbrs={data.otbrs} />
-              <MatterServerSection matter={data.matter} />
-              <NetworksSection networks={data.networks} />
-              <MdnsTrelSection mdns={data.mdns} trel={data.trel} />
-              <MqttSectionView mqtt={data.mqtt} />
-            </div>
+            <InfraColumnLayout
+              items={[
+                { id: "otbr", mobileOrder: 1, node: <OtbrSection otbrs={data.otbrs} /> },
+                {
+                  id: "matter",
+                  mobileOrder: 2,
+                  node: <MatterServerSection matter={data.matter} />,
+                },
+                {
+                  id: "networks",
+                  mobileOrder: 3,
+                  node: <NetworksSection networks={data.networks} />,
+                },
+                {
+                  id: "mdns",
+                  mobileOrder: 4,
+                  node: <MdnsTrelSection mdns={data.mdns} trel={data.trel} />,
+                },
+                { id: "mqtt", mobileOrder: 5, node: <MqttSectionView mqtt={data.mqtt} /> },
+                { id: "reports", mobileOrder: 6, node: <Reports report={data.report} /> },
+              ]}
+            />
 
-            <Reports report={data.report} />
             <Diagnostics data={data} />
           </>
         )}
