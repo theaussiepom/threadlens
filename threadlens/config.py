@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CONFIG_PATH = Path("/config/config.yaml")
@@ -22,6 +22,21 @@ class RuntimeMode(StrEnum):
 class MatterServerVariant(StrEnum):
     PYTHON = "python"
     UNKNOWN = "unknown"
+
+
+class ProbeMode(StrEnum):
+    OFF = "off"
+    CONSERVATIVE = "conservative"
+    STANDARD = "standard"
+    DIAGNOSTIC = "diagnostic"
+
+
+_MODE_DEFAULT_INTERVAL_SECONDS: dict[ProbeMode, int] = {
+    ProbeMode.OFF: 3600,
+    ProbeMode.CONSERVATIVE: 3600,
+    ProbeMode.STANDARD: 1800,
+    ProbeMode.DIAGNOSTIC: 900,
+}
 
 
 class SiteConfig(BaseModel):
@@ -91,24 +106,72 @@ class OtbrPollingConfig(BaseModel):
 
 
 class MatterProbeAttributesConfig(BaseModel):
-    """Attribute paths used for read reachability probes (endpoint/cluster/attribute)."""
+    """Advanced attribute path overrides for read reachability probes."""
 
     window_covering: list[str] = Field(default_factory=lambda: ["1/258/10"])
-    fallback: list[str] = Field(default_factory=lambda: ["0/40/5"])
+    fallback: list[str] = Field(default_factory=lambda: ["0/40/2", "0/40/4", "0/40/5"])
 
 
-class MatterProbeConfig(BaseModel):
-    """Conservative defaults for Matter read reachability probes (read-only)."""
+class MatterProbePerNodeOverride(BaseModel):
+    preferred: list[str] = Field(default_factory=list)
+    disabled: bool = False
 
-    enabled: bool = False
-    manual_enabled: bool = True
-    schedule_enabled: bool = False
-    interval_seconds: int = Field(default=3600, ge=60)
+
+class MatterProbeAdvancedConfig(BaseModel):
+    """Low-level probe tuning and advanced attribute overrides."""
+
+    interval_seconds: int | None = Field(default=None, ge=60)
     timeout_seconds: float = Field(default=10.0, gt=0)
     max_concurrent: int = Field(default=1, ge=1)
     jitter_seconds: int = Field(default=300, ge=0)
     ping_enabled: bool = False
     attributes: MatterProbeAttributesConfig = Field(default_factory=MatterProbeAttributesConfig)
+    per_node: dict[str, MatterProbePerNodeOverride] = Field(default_factory=dict)
+
+
+class MatterProbeConfig(BaseModel):
+    """User-facing and advanced Matter read reachability probe settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: ProbeMode = ProbeMode.OFF
+    manual_enabled: bool = True
+    schedule_enabled: bool = False
+    advanced: MatterProbeAdvancedConfig = Field(default_factory=MatterProbeAdvancedConfig)
+
+    @property
+    def effective_mode(self) -> ProbeMode:
+        return self.mode
+
+    @property
+    def probes_active(self) -> bool:
+        return self.mode != ProbeMode.OFF
+
+    @property
+    def interval_seconds(self) -> int:
+        if self.advanced.interval_seconds is not None:
+            return self.advanced.interval_seconds
+        return _MODE_DEFAULT_INTERVAL_SECONDS[self.effective_mode]
+
+    @property
+    def timeout_seconds(self) -> float:
+        return self.advanced.timeout_seconds
+
+    @property
+    def max_concurrent(self) -> int:
+        return self.advanced.max_concurrent
+
+    @property
+    def jitter_seconds(self) -> int:
+        return self.advanced.jitter_seconds
+
+    @property
+    def ping_enabled(self) -> bool:
+        return self.advanced.ping_enabled
+
+    @property
+    def attributes(self) -> MatterProbeAttributesConfig:
+        return self.advanced.attributes
 
 
 class MatterPollingConfig(BaseModel):

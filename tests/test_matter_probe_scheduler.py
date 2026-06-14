@@ -8,7 +8,7 @@ import pytest
 
 from threadlens.collectors.matter_probe_scheduler import MatterProbeScheduler
 from threadlens.collectors.matter_probes import MatterProbeRunResult
-from threadlens.config import MatterProbeConfig
+from threadlens.config import MatterProbeAdvancedConfig, MatterProbeConfig, ProbeMode
 
 
 class FakeSleep:
@@ -21,7 +21,7 @@ class FakeSleep:
 
 @pytest.mark.asyncio
 async def test_scheduler_does_not_start_when_disabled() -> None:
-    config = MatterProbeConfig(enabled=False, schedule_enabled=False)
+    config = MatterProbeConfig(mode=ProbeMode.OFF, schedule_enabled=False)
     scheduler = MatterProbeScheduler(
         config=config,
         list_available_node_ids=lambda: [1, 2],
@@ -35,7 +35,7 @@ async def test_scheduler_does_not_start_when_disabled() -> None:
 
 @pytest.mark.asyncio
 async def test_scheduler_does_not_start_when_schedule_disabled() -> None:
-    config = MatterProbeConfig(enabled=True, schedule_enabled=False)
+    config = MatterProbeConfig(mode=ProbeMode.CONSERVATIVE, schedule_enabled=False)
     scheduler = MatterProbeScheduler(
         config=config,
         list_available_node_ids=lambda: [1],
@@ -53,11 +53,13 @@ async def test_scheduler_runs_cycle_when_enabled() -> None:
     sleep = FakeSleep()
     state = {"running": True}
     config = MatterProbeConfig(
-        enabled=True,
+        mode=ProbeMode.CONSERVATIVE,
         schedule_enabled=True,
-        interval_seconds=60,
-        jitter_seconds=0,
-        max_concurrent=1,
+        advanced=MatterProbeAdvancedConfig(
+            interval_seconds=60,
+            jitter_seconds=0,
+            max_concurrent=1,
+        ),
     )
 
     async def run_probe(node_id: int) -> MatterProbeRunResult:
@@ -96,11 +98,13 @@ async def test_scheduler_respects_max_concurrent_per_cycle() -> None:
                 state["running"] = False
 
     config = MatterProbeConfig(
-        enabled=True,
+        mode=ProbeMode.CONSERVATIVE,
         schedule_enabled=True,
-        interval_seconds=60,
-        jitter_seconds=0,
-        max_concurrent=2,
+        advanced=MatterProbeAdvancedConfig(
+            interval_seconds=60,
+            jitter_seconds=0,
+            max_concurrent=2,
+        ),
     )
 
     async def run_probe(node_id: int) -> MatterProbeRunResult:
@@ -134,7 +138,11 @@ async def test_scheduler_respects_max_concurrent_per_cycle() -> None:
 async def test_scheduler_handles_probe_errors_without_crashing() -> None:
     sleep = FakeSleep()
     state = {"running": True}
-    config = MatterProbeConfig(enabled=True, schedule_enabled=True, jitter_seconds=0)
+    config = MatterProbeConfig(
+        mode=ProbeMode.CONSERVATIVE,
+        schedule_enabled=True,
+        advanced=MatterProbeAdvancedConfig(jitter_seconds=0),
+    )
 
     async def run_probe(_node_id: int) -> MatterProbeRunResult:
         state["running"] = False
@@ -159,7 +167,11 @@ async def test_scheduler_handles_probe_errors_without_crashing() -> None:
 @pytest.mark.asyncio
 async def test_scheduler_stops_cleanly() -> None:
     sleep = FakeSleep()
-    config = MatterProbeConfig(enabled=True, schedule_enabled=True, jitter_seconds=0)
+    config = MatterProbeConfig(
+        mode=ProbeMode.CONSERVATIVE,
+        schedule_enabled=True,
+        advanced=MatterProbeAdvancedConfig(jitter_seconds=0),
+    )
     scheduler = MatterProbeScheduler(
         config=config,
         list_available_node_ids=lambda: [],

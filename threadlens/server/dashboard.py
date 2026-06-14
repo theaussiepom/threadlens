@@ -564,30 +564,44 @@ def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
     successes_24h = node.get("read_probe_successes_24h")
     last_ok = node.get("last_read_probe_ok")
     available = node.get("available")
+    probe_label = node.get("last_probe_label") or "Read check"
+    note = node.get("last_read_probe_note")
 
     summary: str | None = None
+    overview_label: str | None = None
     if diagnostics_available:
         if limited:
             summary = "Read diagnostics are limited for this node (unsupported attribute path)."
+            overview_label = "Read diagnostics limited"
+        elif last_ok is True:
+            overview_label = "Read checks OK"
         elif available is True and last_ok is False:
             summary = "Safe read probes failed recently. This does not prove commands are failing."
+            overview_label = "Read probe issue"
         elif isinstance(failures_24h, int) and failures_24h >= _READ_PROBE_FAILURES_DEGRADED_24H:
             summary = (
                 "Matter Server reports this node as available, but recent safe read probes "
                 "did not receive a successful response."
             )
+            overview_label = "Read probe issue"
+        elif last_ok is False:
+            overview_label = "Read probe issue"
 
     return {
         "diagnostics_available": diagnostics_available,
         "last_at": node.get("last_read_probe_at"),
         "last_ok": last_ok,
         "limited": limited,
+        "probe_kind": node.get("last_successful_probe_kind"),
+        "probe_label": probe_label,
+        "overview_label": overview_label,
         "attribute_path": node.get("last_read_probe_attribute_path"),
         "duration_ms": node.get("last_read_probe_duration_ms"),
         "error_code": node.get("last_read_probe_error_code"),
         "failures_24h": failures_24h,
         "successes_24h": successes_24h,
         "summary": summary,
+        "note": note,
     }
 
 

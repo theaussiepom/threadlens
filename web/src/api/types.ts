@@ -22,12 +22,16 @@ export interface ReadProbeDiagnostics {
   last_at: string | null;
   last_ok: boolean | null;
   limited?: boolean;
+  probe_kind?: string | null;
+  probe_label?: string | null;
+  overview_label?: string | null;
   attribute_path: string | null;
   duration_ms: number | null;
   error_code: string | number | null;
   failures_24h: number | null;
   successes_24h: number | null;
   summary: string | null;
+  note?: string | null;
 }
 
 export interface PingProbeDiagnostics {

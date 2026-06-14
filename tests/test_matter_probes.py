@@ -28,12 +28,28 @@ from threadlens.collectors.matter_probes import (
 )
 from threadlens.collectors.matter_server import MatterServerObserver
 from threadlens.collectors.matter_ws import MatterCommandResult
-from threadlens.config import MatterPollingConfig, MatterProbeConfig, ThreadLensConfig
+from threadlens.config import (
+    MatterPollingConfig,
+    MatterProbeAdvancedConfig,
+    MatterProbeAttributesConfig,
+    MatterProbeConfig,
+    ProbeMode,
+    ThreadLensConfig,
+)
 from threadlens.models.state import MatterNodeState
 
 
 def _probe_config(**overrides: Any) -> MatterPollingConfig:
-    probes = MatterProbeConfig(**{k: v for k, v in overrides.items() if k != "matter"})
+    probe_overrides = {
+        key: value for key, value in overrides.items() if key in MatterProbeConfig.model_fields
+    }
+    if "mode" not in probe_overrides:
+        probe_overrides["mode"] = ProbeMode.CONSERVATIVE
+    if "advanced" not in probe_overrides:
+        probe_overrides["advanced"] = MatterProbeAdvancedConfig(
+            attributes=MatterProbeAttributesConfig(fallback=["0/40/5"])
+        )
+    probes = MatterProbeConfig(**probe_overrides)
     base = {"probes": probes, **{k: v for k, v in overrides.items() if k == "matter"}}
     return MatterPollingConfig(**base)
 
@@ -171,7 +187,13 @@ async def test_read_probe_failure_updates_node_state(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_read_probe_timeout_records_timed_out_event(tmp_path: Path) -> None:
-    probes = MatterProbeConfig(timeout_seconds=0.05)
+    probes = MatterProbeConfig(
+        mode=ProbeMode.CONSERVATIVE,
+        advanced=MatterProbeAdvancedConfig(
+            timeout_seconds=0.05,
+            attributes=MatterProbeAttributesConfig(fallback=["0/40/5"]),
+        ),
+    )
     observer = await _observer_with_node(tmp_path, probes=probes)
 
     result = await observer.run_manual_read_probe(24)
@@ -196,11 +218,11 @@ async def test_read_probe_unsupported_attribute_event(tmp_path: Path) -> None:
     await _dispatch_last_command(
         observer,
         error_code=7,
-        details="Unsupported attribute path 1/258/10",
+        details="Unsupported attribute path 0/40/5",
     )
     result = await probe_task
 
-    assert result.read_probe_ok is False
+    assert result.read_probe_ok is None
     state = observer._nodes[24]
     assert state.last_read_probe_ok is None
     assert state.last_read_probe_limited is True
@@ -226,7 +248,13 @@ async def test_unavailable_node_records_skipped(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_ping_success_and_failure_update_ping_fields(tmp_path: Path) -> None:
-    probes = MatterProbeConfig(ping_enabled=True)
+    probes = MatterProbeConfig(
+        mode=ProbeMode.CONSERVATIVE,
+        advanced=MatterProbeAdvancedConfig(
+            ping_enabled=True,
+            attributes=MatterProbeAttributesConfig(fallback=["0/40/5"]),
+        ),
+    )
     observer = await _observer_with_node(tmp_path, probes=probes)
 
     probe_task = asyncio.create_task(observer.run_manual_read_probe(24))
@@ -275,27 +303,39 @@ async def test_24h_counters_distinguish_none_vs_zero(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_window_covering_attribute_path_selection(tmp_path: Path) -> None:
+    probes = MatterProbeConfig(
+        mode=ProbeMode.STANDARD,
+        advanced=MatterProbeAdvancedConfig(
+            attributes=MatterProbeAttributesConfig(fallback=["0/40/5"])
+        ),
+    )
     observer = await _observer_with_node(
         tmp_path,
-        attribute_keys=["1/258/10", "0/40/5"],
+        attribute_keys=["2/258/10", "0/40/5"],
+        probes=probes,
     )
 
     probe_task = asyncio.create_task(observer.run_manual_read_probe(24))
-    await asyncio.sleep(0)
-    sent = await _dispatch_last_command(observer, result={"1/258/10": 50})
+    await _dispatch_command(observer, "read_attribute", result={"0/40/5": "ok"})
+    sent = await _dispatch_command(observer, "read_attribute", result={"2/258/10": 50})
     await probe_task
 
-    assert sent["args"]["attribute_path"] == "1/258/10"
+    assert sent["args"]["attribute_path"] == "2/258/10"
 
 
-def test_resolve_read_probe_attribute_path_uses_device_types() -> None:
-    config = MatterProbeConfig()
+def test_resolve_read_probe_attribute_path_uses_planner_fallback() -> None:
+    config = MatterProbeConfig(
+        mode=ProbeMode.CONSERVATIVE,
+        advanced=MatterProbeAdvancedConfig(
+            attributes=MatterProbeAttributesConfig(fallback=["0/40/5"])
+        ),
+    )
     path = resolve_read_probe_attribute_path(
         attribute_keys=None,
-        device_types=["Window Covering"],
+        device_types=None,
         config=config,
     )
-    assert path == "1/258/10"
+    assert path == "0/40/5"
 
 
 def test_is_unsupported_attribute_error_detects_details() -> None:
@@ -355,15 +395,16 @@ async def test_probe_fields_preserved_on_passive_node_update(tmp_path: Path) -> 
 
 def test_matter_probe_config_defaults() -> None:
     config = MatterProbeConfig()
-    assert config.enabled is False
+    assert config.mode == ProbeMode.OFF
     assert config.schedule_enabled is False
     assert config.manual_enabled is True
     assert config.timeout_seconds == 10.0
     assert config.max_concurrent == 1
     assert config.interval_seconds == 3600
     assert config.jitter_seconds == 300
-    assert config.attributes.fallback == ["0/40/5"]
+    assert config.attributes.fallback == ["0/40/2", "0/40/4", "0/40/5"]
     assert config.attributes.window_covering == ["1/258/10"]
+    assert config.effective_mode == ProbeMode.OFF
 
 
 def test_matter_node_probe_field_defaults() -> None:

@@ -75,10 +75,11 @@ matter:
   request_timeout_seconds: 10
   # Optional read-only Matter read probes (disabled by default).
   # probes:
-  #   enabled: true
+  #   mode: conservative
   #   schedule_enabled: true
-  #   interval_seconds: 1800
-  #   max_concurrent: 1
+  #   advanced:
+  #     interval_seconds: 1800
+  #     max_concurrent: 1
   # See docs/matter-read-probes.md
 
 matter_servers:
