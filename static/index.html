@@ -4,16 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ThreadLens Dashboard</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; }
-    h1 { margin-bottom: 0.5rem; }
-    p { color: #444; }
-    a { color: #0b57d0; }
-  </style>
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
-  <h1>ThreadLens Dashboard</h1>
-  <p>Core dashboard UI foundation is installed.</p>
-  <p>API: <a href="/api/v1/dashboard">/api/v1/dashboard</a></p>
+  <main id="tl-app" class="tl-root">
+    <noscript>ThreadLens dashboard requires JavaScript. Use the REST API at api/v1/dashboard.</noscript>
+  </main>
+  <script src="dashboard.js" defer></script>
 </body>
 </html>

@@ -69,11 +69,13 @@ During the migration period, the HACS integration may still serve its own dashbo
 
 ## Dashboard UI (static assets)
 
-When built dashboard static assets are present, Core serves them from a configurable directory (`THREADLENS_STATIC_DIR`, default `/app/static` in the container image). `GET /` returns the dashboard `index.html`, and unknown frontend routes fall back to that shell for SPA routing.
+ThreadLens Core serves the canonical dashboard UI at `/`. The dashboard is dependency-free vanilla HTML/CSS/JS (no Node/Vite build, no external CDN) shipped in `static/` and consumes the read-only `api/v1/dashboard` payload via path-safe relative URLs. It works when hosted at the root, behind a reverse proxy, or under a Home Assistant Ingress path prefix.
 
-The repository currently ships a small placeholder dashboard shell only. The full dashboard UI port is a follow-on pass. API-only mode still works when static assets are absent — `GET /` returns an HTML link page and all `/api/v1/...` routes behave as before.
+The dashboard shows an incident summary, at-a-glance Matter node health with drilldown, OTBR/Thread network/Matter server status, mDNS/TREL observation, MQTT state, report links, and expandable raw diagnostics. Report YAML/JSON links open directly from Core using relative `api/v1/report.yaml` and `api/v1/report.json` URLs (no Home Assistant signed-path proxy).
 
-The HACS integration dashboard remains the current production UI until the Core dashboard port is complete.
+Core serves the dashboard from a configurable directory (`THREADLENS_STATIC_DIR`, default `/app/static` in the container image). Unknown frontend routes fall back to the dashboard shell for SPA routing, while `/api/...`, `/docs`, `/redoc`, and `/openapi.json` are never swallowed. API-only mode still works when static assets are absent — `GET /` returns an HTML link page and all `/api/v1/...` routes behave as before.
+
+The HACS integration dashboard remains the current production UI for Home Assistant users until the HACS migration pass; this Core dashboard does not depend on Home Assistant or HACS.
 
 ## Related docs
 

@@ -148,7 +148,9 @@ def test_repo_static_index_exists_for_packaging() -> None:
     assert index.is_file()
     content = index.read_text(encoding="utf-8")
     assert "ThreadLens Dashboard" in content
-    assert "/api/v1/dashboard" in content
+    assert 'href="dashboard.css"' in content
+    assert 'src="dashboard.js"' in content
+    assert 'id="tl-app"' in content
 
 
 def test_api_landing_page_includes_core_links() -> None:
