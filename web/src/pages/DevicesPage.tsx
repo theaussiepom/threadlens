@@ -24,7 +24,6 @@ export function DevicesPage() {
   const { data, error, hasLoaded, connected, refresh } = useDashboardContext();
   const [search, setSearch] = useState("");
   const [classification, setClassification] = useState("");
-  const [showHealthy, setShowHealthy] = useState(false);
 
   const nodes = data?.matter.nodes ?? [];
 
@@ -92,17 +91,10 @@ export function DevicesPage() {
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <SectionHeading>Healthy ({healthy.length})</SectionHeading>
-          <button
-            type="button"
-            onClick={() => setShowHealthy((v) => !v)}
-            className="text-sm text-zl-accent hover:underline"
-          >
-            {showHealthy ? "Hide" : "Show"}
-          </button>
-        </div>
-        {showHealthy && (
+        <SectionHeading>Healthy ({healthy.length})</SectionHeading>
+        {healthy.length === 0 ? (
+          <EmptyState title="No healthy Matter nodes in this filter" />
+        ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {healthy.map((node) => (
               <MatterNodeCard key={node.subject_id ?? `${node.server_id}:${node.node_id}`} node={node} />
