@@ -12,9 +12,31 @@ const GROUP_ORDER: { key: string; title: string }[] = [
   { key: "healthy", title: "Healthy" },
 ];
 
+function readProbeCountLabel(
+  readProbe: MatterNode["read_probe"] | null | undefined,
+): string | null {
+  if (!readProbe?.diagnostics_available || readProbe.limited) {
+    return null;
+  }
+  const failures = readProbe.failures_24h;
+  const successes = readProbe.successes_24h;
+  if (typeof failures === "number") {
+    const failurePart = `${failures} read failure${failures === 1 ? "" : "s"} (24h)`;
+    if (typeof successes === "number") {
+      return `${failurePart} · ${successes} OK (24h)`;
+    }
+    return failurePart;
+  }
+  if (readProbe.last_ok === false) {
+    return "Last read failed";
+  }
+  return null;
+}
+
 function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: MatterNode) => void }) {
   const meta = nodeClassMeta(node.classification);
-  const subtitle = [node.vendor, node.product].filter(Boolean).join(" · ");
+  const matterSubtitle = node.matter_name && node.matter_name !== node.name ? node.matter_name : null;
+  const subtitle = [matterSubtitle, node.vendor, node.product].filter(Boolean).join(" · ");
   const down = node.unsubscribe_count_24h || 0;
   const up = node.resubscribe_count_24h || 0;
   const showChurn = down > 0 || up > 0;
@@ -25,6 +47,7 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
     (readProbe.last_ok === false ||
       readProbe.limited ||
       (readProbe.failures_24h ?? 0) > 0);
+  const classificationReason = node.classification_reason || node.health_reason;
   const readProbeHint =
     overviewLabel ||
     (readProbe?.limited
@@ -32,6 +55,23 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
       : readProbe?.last_ok === false
         ? "Read probe issue"
         : null);
+  const showClassificationReason =
+    Boolean(classificationReason) &&
+    (node.classification === "recently_unstable" ||
+      node.classification === "needs_attention" ||
+      node.classification === "diagnostics_limited");
+  const reasonHint = showClassificationReason
+    ? classificationReason
+    : showReadProbe
+      ? readProbeHint
+      : null;
+  const readProbeCount = readProbeCountLabel(readProbe);
+  const readProbeFailures = readProbe?.failures_24h ?? 0;
+  const showReadProbeBadge =
+    readProbe?.diagnostics_available &&
+    !readProbe.limited &&
+    ((typeof readProbe.failures_24h === "number" && readProbe.failures_24h > 0) ||
+      readProbe.last_ok === false);
 
   return (
     <button
@@ -52,8 +92,9 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
               {down} down / {up} up (24h)
             </span>
           )}
-          {showReadProbe && readProbeHint && (
-            <span className="tl-node-read-probe tl-muted">{readProbeHint}</span>
+          {reasonHint && <span className="tl-node-read-probe tl-muted">{reasonHint}</span>}
+          {readProbeCount && (
+            <span className="tl-node-read-probe-count tl-muted">{readProbeCount}</span>
           )}
           {node.last_event_at && (
             <span className="tl-node-last">Last event {fmtRelative(node.last_event_at)}</span>
@@ -62,7 +103,14 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
       </span>
       <span className="tl-node-end">
         <Badge tone={meta.tone}>{meta.label}</Badge>
-        {readProbe?.diagnostics_available && !showReadProbe && node.classification === "healthy" && (
+        {showReadProbeBadge && (
+          <Badge tone="warn">
+            {typeof readProbe?.failures_24h === "number" && readProbeFailures > 0
+              ? `${readProbeFailures} read failure${readProbeFailures === 1 ? "" : "s"}`
+              : "Read failed"}
+          </Badge>
+        )}
+        {readProbe?.diagnostics_available && !showReadProbeBadge && node.classification === "healthy" && (
           <Badge tone="info">{overviewLabel || "Read checks OK"}</Badge>
         )}
         <span className="tl-node-chevron" aria-hidden="true">

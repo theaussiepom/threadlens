@@ -100,6 +100,52 @@ def test_node_entry_includes_read_probe_block() -> None:
     assert "command failed" not in entry["read_probe"]["summary"].lower()
 
 
+def test_node_entry_exposes_classification_reason_for_read_probe_unstable() -> None:
+    node = _node(
+        read_probe_diagnostics_available=True,
+        last_read_probe_ok=False,
+        read_probe_failures_24h=2,
+        health={"state": "warning", "reasons": ["matter_node_read_probe_failed"]},
+    )
+    entry = _node_entry(node, [])
+    assert entry["classification"] == "recently_unstable"
+    assert entry["classification_reason"] == "Read probe issue"
+    assert entry["health_reason"] == "Safe read probe failed recently"
+
+
+def test_incident_summary_explains_read_probe_only_unstable() -> None:
+    from threadlens.server.dashboard import build_incident_summary
+
+    nodes = [
+        {
+            "name": "Living Blind 3",
+            "classification": "recently_unstable",
+            "classification_reason": "Read probe issue",
+            "recent_unavailable_count": 0,
+            "recent_recovered_count": 0,
+            "availability_flaps_24h": 0,
+            "read_probe": {
+                "diagnostics_available": True,
+                "last_ok": False,
+                "limited": False,
+                "failures_24h": 2,
+            },
+        }
+    ]
+    incident = build_incident_summary(
+        nodes=nodes,
+        otbr_entries=[],
+        matter_servers=[{"connected": True}],
+        mdns_health="healthy",
+        mdns_observation_degraded=False,
+        trel_display_health="healthy",
+        has_events=False,
+    )
+    assert incident["state"] == "watch"
+    assert "safe read probes" in incident["detail"].lower()
+    assert incident["affected_nodes"][0]["reason"] == "Read probe issue"
+
+
 def test_read_probe_summary_uses_careful_wording() -> None:
     block = _build_read_probe_block(
         {

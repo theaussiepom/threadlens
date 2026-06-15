@@ -408,7 +408,7 @@ def _node_subject_id(node: dict[str, Any]) -> str | None:
 
 
 def _node_label(node: dict[str, Any]) -> str:
-    name = node.get("friendly_name") or node.get("name")
+    name = node.get("ha_device_name") or node.get("friendly_name") or node.get("name")
     if name:
         return str(name)
     node_id = node.get("node_id")
@@ -688,6 +688,66 @@ def _node_health_reason(node: dict[str, Any]) -> str | None:
     return None
 
 
+def _availability_unstable_signals(
+    node: dict[str, Any], node_events: list[dict[str, Any]]
+) -> bool:
+    recent_unavailable = sum(
+        1 for e in node_events if e.get("event_type") == _NODE_UNAVAILABLE_EVENT
+    )
+    recent_recovered = sum(1 for e in node_events if e.get("event_type") == _NODE_RECOVERED_EVENT)
+    flaps = node.get("availability_flaps_24h") or 0
+    flapping = isinstance(flaps, int) and flaps > 0
+    return recent_unavailable > 0 or recent_recovered > 0 or flapping
+
+
+def _read_probe_issue_signals(read_probe: dict[str, Any]) -> bool:
+    if not read_probe.get("diagnostics_available") or read_probe.get("limited"):
+        return False
+    if read_probe.get("last_ok") is False:
+        return True
+    failures = read_probe.get("failures_24h")
+    return isinstance(failures, int) and failures >= _READ_PROBE_FAILURES_WARNING_24H
+
+
+def _node_classification_reason(
+    *,
+    node: dict[str, Any],
+    node_events: list[dict[str, Any]],
+    classification: str,
+    read_probe: dict[str, Any],
+) -> str | None:
+    """Human-readable reason for a node's dashboard classification."""
+    if classification == "unavailable":
+        return _node_health_reason(node) or REASON_LABELS["matter_node_unavailable"]
+    if classification == "diagnostics_limited":
+        return read_probe.get("overview_label") or REASON_LABELS[
+            "matter_node_read_probe_diagnostics_limited"
+        ]
+    if classification == "needs_attention":
+        return (
+            read_probe.get("summary")
+            or read_probe.get("overview_label")
+            or REASON_LABELS["matter_node_read_probe_failures_24h"]
+        )
+
+    availability_unstable = _availability_unstable_signals(node, node_events)
+    read_probe_issue = _read_probe_issue_signals(read_probe)
+    if classification == "recently_unstable":
+        if read_probe_issue and not availability_unstable:
+            return (
+                read_probe.get("overview_label")
+                or read_probe.get("summary")
+                or REASON_LABELS["matter_node_read_probe_failed"]
+            )
+        if availability_unstable and not read_probe_issue:
+            return "Recent availability changes"
+        if read_probe_issue and availability_unstable:
+            return "Recent availability changes and read probe issue"
+        return _node_health_reason(node) or "Recently unstable"
+
+    return _node_health_reason(node)
+
+
 def _node_entry(node: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     subject_id = _node_subject_id(node)
     node_events = _events_for_subject(events, subject_id)
@@ -709,14 +769,25 @@ def _node_entry(node: dict[str, Any], events: list[dict[str, Any]]) -> dict[str,
     health_label = _CLASSIFICATION_HEALTH_LABEL.get(classification, "Unknown")
     read_probe = _build_read_probe_block(node)
     ping_probe = _build_ping_block(node)
+    classification_reason = _node_classification_reason(
+        node=node,
+        node_events=node_events,
+        classification=classification,
+        read_probe=read_probe,
+    )
+    health_reason = _node_health_reason(node) or classification_reason
     return {
         "node_id": node_id,
         "server_id": node.get("server_id"),
         "subject_id": subject_id,
         "name": display_name,
+        "matter_name": node.get("friendly_name"),
+        "ha_device_name": node.get("ha_device_name"),
+        "ha_entity_id": node.get("ha_entity_id"),
         "available": node.get("available"),
         "health": health_label,
-        "health_reason": _node_health_reason(node),
+        "health_reason": health_reason,
+        "classification_reason": classification_reason,
         "classification": classification,
         "vendor": node.get("vendor"),
         "product": node.get("product"),
@@ -831,7 +902,7 @@ def build_incident_summary(
                 "node_id": n.get("node_id"),
                 "name": n.get("name"),
                 "health": n.get("health"),
-                "reason": n.get("health_reason"),
+                "reason": n.get("classification_reason") or n.get("health_reason"),
             }
             for n in targets
         ]
@@ -899,10 +970,34 @@ def build_incident_summary(
     if unstable:
         names = [n["name"] for n in unstable]
         headline = f"{len(unstable)} Matter node(s) recently unstable: {', '.join(names)}."
-        detail = (
-            "No current outage, but recent Matter node changes were observed. Review affected "
-            "nodes if symptoms continue."
-        )
+        probe_unstable = [
+            n
+            for n in unstable
+            if _read_probe_issue_signals(n.get("read_probe") or {})
+            and not (
+                (n.get("recent_unavailable_count") or 0)
+                or (n.get("recent_recovered_count") or 0)
+                or (
+                    isinstance(n.get("availability_flaps_24h"), int)
+                    and n.get("availability_flaps_24h", 0) > 0
+                )
+            )
+        ]
+        if probe_unstable and len(probe_unstable) == len(unstable):
+            detail = (
+                "Matter Server reports these nodes as available, but recent safe read probes "
+                "did not receive a successful response. This does not prove commands are failing."
+            )
+        elif probe_unstable:
+            detail = (
+                "No current outage, but affected nodes show recent availability changes and/or "
+                "read probe issues. Review each node for the specific reason."
+            )
+        else:
+            detail = (
+                "No current outage, but recent Matter node availability changes were observed. "
+                "Review affected nodes if symptoms continue."
+            )
         return {
             "state": "watch",
             "title": headline,
@@ -958,6 +1053,7 @@ def build_node_detail(
     subject_id = node.get("subject_id")
     node_events = _events_for_subject(events, subject_id)
     this_unstable = node.get("recent_unavailable_count", 0) or node.get("recent_recovered_count", 0)
+    read_probe_issue = _read_probe_issue_signals(node.get("read_probe") or {})
 
     other_unstable = [
         n
@@ -971,7 +1067,13 @@ def build_node_detail(
         if isinstance(e.get("event_type"), str) and e["event_type"] in _INFRA_DEGRADED_EVENTS
     ]
 
-    if not node_events and not this_unstable:
+    if read_probe_issue and not this_unstable and not node_events:
+        assessment_kind = "individual"
+        assessment = (
+            "Matter Server reports this node as available, but the most recent safe read probe "
+            "did not succeed. This does not prove commands are failing."
+        )
+    elif not node_events and not this_unstable:
         assessment_kind = "insufficient"
         assessment = (
             "There is not enough recent event history to classify this as "

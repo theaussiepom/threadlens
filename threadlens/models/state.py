@@ -169,3 +169,5 @@ class MatterNodeState(BaseModel):
     last_probe_label: str | None = None
     last_unsupported_probe_paths: list[str] | None = None
     last_read_probe_note: str | None = None
+    ha_device_name: str | None = None
+    ha_entity_id: str | None = None
