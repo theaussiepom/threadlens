@@ -2,6 +2,21 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.2] - 2026-06-15
+
+Post-validation tuning release for Matter read probes (PR #15).
+
+### Changed
+
+- Public probe disabled mode is now `disabled` instead of `off`; `"off"` and YAML `false` map to `disabled` to avoid YAML parser footguns
+- Standard mode tries inferred device-specific read probes (e.g. Window Covering `*/258/10`) before generic Basic Information fallback
+- Unsupported or failing blind-specific probes with successful generic fallback surface as diagnostics limited, not unavailable
+- Docs include temporary validation interval example and updated mode guidance
+
+### Notes
+
+- Intended for final Matter read probe validation on Study Pi after v0.2.1 `PASS WITH TUNING`
+
 ## [0.2.1] - 2026-06-15
 
 Validation build for the Matter read probe feature stream (PRs #9–#13). Intended for live validation on Study Pi before a final probe release declaration.

@@ -31,7 +31,7 @@ def test_dashboard_endpoint_exists_and_returns_json(tmp_path: Path) -> None:
         assert response.headers["content-type"].startswith("application/json")
         body = response.json()
         assert body["threadlens"]["api_connected"] is True
-        assert body["threadlens"]["version"] == "0.2.1"
+        assert body["threadlens"]["version"] == "0.2.2"
         assert "incident" in body
         assert "matter" in body
         assert "otbrs" in body
