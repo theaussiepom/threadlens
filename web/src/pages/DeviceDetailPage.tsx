@@ -169,11 +169,40 @@ export function DeviceDetailPage() {
               { label: "Last probe time", value: fmtTime(readProbe.last_at) },
               { label: "Probe path", value: orDash(readProbe.attribute_path) },
               { label: "Working path", value: orDash(readProbe.successful_path) },
+              ...(readProbe.unsupported_paths?.length
+                ? [
+                    {
+                      label: "Unsupported paths",
+                      value: readProbe.unsupported_paths.join(", "),
+                    },
+                  ]
+                : []),
+              {
+                label: "Duration",
+                value: readProbe.duration_ms != null ? `${readProbe.duration_ms} ms` : "—",
+              },
               { label: "Failures (24h)", value: readProbe.failures_24h ?? "—" },
               { label: "Successes (24h)", value: readProbe.successes_24h ?? "—" },
             ]}
           />
           {readProbe.summary && <p className="mt-3 text-sm text-zl-muted">{readProbe.summary}</p>}
+          {readProbe.note && <p className="mt-2 text-sm text-zl-muted">{readProbe.note}</p>}
+        </Card>
+      )}
+
+      {node.ping_probe?.diagnostics_available && (
+        <Card title="Ping diagnostics">
+          <KeyValue
+            rows={[
+              {
+                label: "Last ping",
+                value: boolText(node.ping_probe.last_ok, "Succeeded", "Failed"),
+              },
+              { label: "Last ping time", value: fmtTime(node.ping_probe.last_at) },
+              { label: "Failures (24h)", value: node.ping_probe.failures_24h ?? "—" },
+              { label: "Successes (24h)", value: node.ping_probe.successes_24h ?? "—" },
+            ]}
+          />
         </Card>
       )}
 

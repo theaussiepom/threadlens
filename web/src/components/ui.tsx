@@ -53,17 +53,19 @@ export function Badge({
   children,
   severity,
   title,
+  className = "",
 }: {
   children: ReactNode;
   severity?: Severity;
   title?: string;
+  className?: string;
 }) {
   return (
     <span
       title={title}
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
         severity ? severityBg(severity) : "bg-zl-surface-2 text-zl-muted border-zl-border"
-      }`}
+      } ${className}`}
     >
       {children}
     </span>
@@ -89,7 +91,10 @@ export function IncidentBadge({ state }: { state: IncidentState }) {
 
 export function ClassificationBadge({ classification }: { classification: NodeClassification }) {
   return (
-    <Badge severity={classificationToSeverity(classification)}>
+    <Badge
+      severity={classificationToSeverity(classification)}
+      className="shrink-0 whitespace-nowrap"
+    >
       {classificationLabel(classification)}
     </Badge>
   );
