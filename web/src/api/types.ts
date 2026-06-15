@@ -143,6 +143,9 @@ export interface MatterNode {
   ha_device_name?: string | null;
   ha_entity_id?: string | null;
   otbr_ids?: string[];
+  thread_extended_address?: string | null;
+  thread_ipv6_address?: string | null;
+  thread_identity_available?: boolean;
   available: boolean | null;
   health: string;
   health_reason: string | null;

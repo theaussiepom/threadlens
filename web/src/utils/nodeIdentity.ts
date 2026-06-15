@@ -11,6 +11,12 @@ export function nodeSubtitleParts(node: MatterNode): string[] {
   if (node.matter_name) {
     parts.push(`Matter: ${node.matter_name}`);
   }
+  if (node.thread_extended_address) {
+    parts.push(`Thread: ${node.thread_extended_address}`);
+  }
+  if (node.thread_ipv6_address) {
+    parts.push(`IPv6: ${node.thread_ipv6_address}`);
+  }
   const vendorProduct = [node.vendor, node.product].filter(Boolean).join(" · ");
   if (vendorProduct) {
     parts.push(vendorProduct);

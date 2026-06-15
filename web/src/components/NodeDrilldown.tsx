@@ -141,6 +141,8 @@ export function NodeDrilldown({
                 : []),
               { label: "Matter name", value: orDash(node.matter_name) },
               { label: "Matter server", value: orDash(node.server_id as string | number | null) },
+              { label: "Thread extended address", value: orDash(node.thread_extended_address) },
+              { label: "Thread IPv6", value: orDash(node.thread_ipv6_address) },
               { label: "OTBR", value: orDash(formatOtbrIds(node.otbr_ids)) },
               { label: "Vendor", value: orDash(node.vendor) },
               { label: "Product", value: orDash(node.product) },

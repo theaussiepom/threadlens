@@ -26,6 +26,7 @@ from threadlens.collectors.matter_probe_scheduler import MatterProbeScheduler
 from threadlens.collectors.matter_probes import MatterProbeRunner, MatterProbeRunResult
 from threadlens.collectors.matter_ws import MatterCommandResult, MatterWebsocketRequestManager
 from threadlens.config import MatterServerConfig, ThreadLensConfig
+from threadlens.enrichment.thread_matter import apply_thread_identity_correlation
 from threadlens.models.capabilities import MatterServerCapabilities
 from threadlens.models.events import Event, EventSeverity, EventSourceType, EventSubjectType
 from threadlens.models.health import HealthState, HealthStatus
@@ -245,14 +246,18 @@ class MatterServerObserver:
         include_ping: bool | None = None,
     ) -> MatterProbeRunResult:
         """Internal/manual read reachability probe for a single node."""
-        return await self._probe_runner().run_manual_probe(
+        result = await self._probe_runner().run_manual_probe(
             node_id,
             device_types=device_types,
             include_ping=include_ping,
         )
+        await apply_thread_identity_correlation(self._repository)
+        return result
 
     async def _run_scheduled_probe(self, node_id: int) -> MatterProbeRunResult:
-        return await self._probe_runner().run_scheduled_probe(node_id)
+        result = await self._probe_runner().run_scheduled_probe(node_id)
+        await apply_thread_identity_correlation(self._repository)
+        return result
 
     def _list_available_node_ids(self) -> list[int]:
         return [node_id for node_id, node in self._nodes.items() if node.available]
@@ -474,6 +479,9 @@ class MatterServerObserver:
             last_read_probe_note=existing.last_read_probe_note if existing else None,
             ha_device_name=existing.ha_device_name if existing else None,
             ha_entity_id=existing.ha_entity_id if existing else None,
+            thread_ipv6_address=existing.thread_ipv6_address if existing else None,
+            thread_extended_address=existing.thread_extended_address if existing else None,
+            thread_identity_last_at=existing.thread_identity_last_at if existing else None,
         )
         self._nodes[node_id] = state
         await self._repository.upsert_model_state(

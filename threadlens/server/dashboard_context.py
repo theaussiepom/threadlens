@@ -12,6 +12,7 @@ from threadlens.collectors.matter_server import MatterCollector
 from threadlens.collectors.mdns import MdnsObserver
 from threadlens.collectors.otbr_rest import OtbrCollector
 from threadlens.config import RuntimeMode, ThreadLensConfig
+from threadlens.enrichment.thread_matter import build_thread_device_index, correlate_thread_identity
 from threadlens.health import HealthEngine
 from threadlens.health.engine import HealthContext
 from threadlens.models.health import HealthStatus
@@ -20,6 +21,7 @@ from threadlens.models.state import (
     MatterServerState,
     MdnsServiceState,
     OtbrState,
+    ThreadDeviceState,
     ThreadNetworkState,
     TrelServiceState,
 )
@@ -233,6 +235,17 @@ async def build_dashboard_response(
     )
     matter_nodes = await _list_states(repository, CurrentStateType.MATTER_NODE, MatterNodeState)
     matter_nodes = await _enrich_matter_nodes_with_health(health_report, matter_nodes)
+    thread_devices = await _list_states(
+        repository, CurrentStateType.THREAD_DEVICE, ThreadDeviceState
+    )
+    thread_index = build_thread_device_index(
+        [device.model_dump(mode="json") for device in thread_devices]
+    )
+    matter_node_payloads = []
+    for node in matter_nodes:
+        payload = node.model_dump(mode="json")
+        payload.update(correlate_thread_identity(payload, thread_index=thread_index))
+        matter_node_payloads.append(payload)
     mdns_services = await _list_states(repository, CurrentStateType.MDNS_SERVICE, MdnsServiceState)
     trel_services = await _list_states(repository, CurrentStateType.TREL_SERVICE, TrelServiceState)
     events_payload = await build_events_payload(repository, window="24h", limit=100)
@@ -246,7 +259,7 @@ async def build_dashboard_response(
         otbrs=[item.model_dump(mode="json") for item in otbr_states],
         networks=[item.model_dump(mode="json") for item in networks],
         matter_servers=[item.model_dump(mode="json") for item in matter_servers],
-        matter_nodes=[item.model_dump(mode="json") for item in matter_nodes],
+        matter_nodes=matter_node_payloads,
         mdns_services=[item.model_dump(mode="json") for item in mdns_services],
         trel_services=[item.model_dump(mode="json") for item in trel_services],
         events=events_payload,

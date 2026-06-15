@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "threadlens"
-version = "0.2.4"
+version = "0.2.5"
 description = "Read-only Thread and Matter-over-Thread observability suite"
 readme = "README.md"
 requires-python = ">=3.12"

@@ -795,6 +795,13 @@ def _node_entry(
         "ha_device_name": node.get("ha_device_name"),
         "ha_entity_id": node.get("ha_entity_id"),
         "otbr_ids": list(otbr_ids or []),
+        "thread_extended_address": node.get("thread_extended_address"),
+        "thread_ipv6_address": node.get("thread_ipv6_address"),
+        "thread_identity_available": bool(
+            node.get("thread_identity_available")
+            or node.get("thread_extended_address")
+            or node.get("thread_ipv6_address")
+        ),
         "available": node.get("available"),
         "health": health_label,
         "health_reason": health_reason,
