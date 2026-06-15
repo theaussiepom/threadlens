@@ -11,7 +11,7 @@ const INFRA_LABELS: { key: keyof Incident["infrastructure"]; label: string }[] =
 
 export function IncidentSummary({ incident }: { incident: Incident }) {
   const meta = incidentMeta(incident.state);
-  const affected = incident.affected_node_names ?? [];
+  const affected = incident.affected_nodes ?? [];
   const headline = incident.title || incident.headline || "";
   const detail = incident.summary || incident.detail || "";
 
@@ -31,9 +31,10 @@ export function IncidentSummary({ incident }: { incident: Incident }) {
         <div className="tl-incident-affected">
           <span className="tl-incident-affected-label">Affected nodes</span>
           <div className="tl-chip-row">
-            {affected.map((name) => (
-              <span className="tl-chip tl-chip-alert" key={name}>
-                {name}
+            {affected.map((node) => (
+              <span className="tl-chip tl-chip-alert" key={`${node.node_id ?? node.name}`}>
+                {node.name}
+                {node.reason ? ` — ${node.reason}` : ""}
               </span>
             ))}
           </div>

@@ -13,8 +13,10 @@ from threadlens.collectors.matter_server import MatterCollector
 from threadlens.collectors.mdns import MdnsObserver
 from threadlens.collectors.otbr_rest import OtbrCollector
 from threadlens.config import RuntimeMode, ThreadLensConfig
+from threadlens.enrichment.ha_matter import apply_ha_matter_device_names
 from threadlens.health import HealthEngine
 from threadlens.health.engine import HealthContext
+from threadlens.models.ha_enrichment import HaMatterNamesPayload
 from threadlens.models.health import HealthStatus
 from threadlens.models.state import (
     MatterNodeState,
@@ -434,5 +436,21 @@ def create_router(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> APIR
             "count": len(services),
             "services": [service.model_dump(mode="json") for service in services],
         }
+
+    @router.post("/integrations/homeassistant/matter-names")
+    async def homeassistant_matter_names(
+        request: Request,
+        body: HaMatterNamesPayload,
+    ) -> dict[str, object]:
+        repository: StorageRepository | None = getattr(request.app.state, "storage", None)
+        if repository is None:
+            raise HTTPException(status_code=503, detail="Storage not ready")
+        try:
+            return await apply_ha_matter_device_names(
+                repository,
+                body.model_dump(mode="json"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return router

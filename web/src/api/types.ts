@@ -139,9 +139,13 @@ export interface MatterNode {
   server_id: string | number | null;
   subject_id: string | null;
   name: string;
+  matter_name?: string | null;
+  ha_device_name?: string | null;
+  ha_entity_id?: string | null;
   available: boolean | null;
   health: string;
   health_reason: string | null;
+  classification_reason?: string | null;
   classification: NodeClassification;
   vendor: string | null;
   product: string | null;

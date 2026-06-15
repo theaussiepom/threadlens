@@ -128,6 +128,8 @@ Unsupported device-specific reads fall back to generic reads where possible and 
 - **Read probe issue** — generic safe reads failed while the node is available
 - **Read diagnostics limited** — a device-specific read was unsupported or inconclusive, but a generic read succeeded
 
+When a node is classified **Recently unstable** only because of read probe failures (no recent availability changes), the dashboard and incident summary explain that explicitly via `classification_reason` and health reason code `matter_node_read_probe_failed`. The incident affected-node list includes the per-node reason (for example “Read probe issue” or “Safe read probe failed recently”) so it is clear why the node is flagged.
+
 The dashboard overview shows friendly labels only. Node drilldown shows the probe type first and the technical path as advanced detail.
 
 ## Related documentation

@@ -2,6 +2,26 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.3] - 2026-06-15
+
+Dashboard and HA enrichment release after Study Pi read-probe validation.
+
+### Added
+
+- Home Assistant Matter device name enrichment API (`POST /api/v1/integrations/homeassistant/matter-names`)
+- Per-node `classification_reason` on the dashboard payload so unstable nodes explain read probe vs availability causes
+- Per-node read probe failure counters in the Core web UI (`N read failures (24h)`)
+
+### Changed
+
+- Incident summary uses read-probe-specific wording when instability is probe-only; affected nodes show per-node reasons
+- Node drilldown assessment covers read-probe-only instability without availability events
+- Dashboard prefers `ha_device_name` for node labels when enriched from Home Assistant
+
+### Notes
+
+- Requires ThreadLens HACS integration **0.1.19+** to push HA device names to Core
+
 ## [0.2.2] - 2026-06-15
 
 Post-validation tuning release for Matter read probes (PR #15).

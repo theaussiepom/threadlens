@@ -23,6 +23,10 @@ function assess(node: MatterNode, data: DashboardPayload): Assessment {
   const events = data.events?.items ?? [];
   const nodes = data.matter?.nodes ?? [];
   const thisUnstable = (node.recent_unavailable_count || 0) || (node.recent_recovered_count || 0);
+  const readProbeIssue =
+    Boolean(node.read_probe?.diagnostics_available) &&
+    !node.read_probe?.limited &&
+    node.read_probe?.last_ok === false;
   const nodeEvents = events.filter((e) => e.subject_id === node.subject_id);
   const otherUnstable = nodes.filter(
     (n) =>
@@ -33,6 +37,14 @@ function assess(node: MatterNode, data: DashboardPayload): Assessment {
     (e) => typeof e.event_type === "string" && INFRA_DEGRADED_EVENTS.has(e.event_type)
   );
 
+  if (readProbeIssue && !thisUnstable) {
+    return {
+      kind: "individual",
+      text:
+        node.classification_reason ||
+        "Matter Server reports this node as available, but the most recent safe read probe did not succeed. This does not prove commands are failing.",
+    };
+  }
   if (!nodeEvents.length && !thisUnstable) {
     return {
       kind: "insufficient",
@@ -81,7 +93,9 @@ export function NodeDrilldown({
   }, [onClose]);
 
   const meta = nodeClassMeta(node.classification);
-  const subtitle = [node.vendor, node.product].filter(Boolean).join(" · ");
+  const matterSubtitle =
+    node.matter_name && node.matter_name !== node.name ? node.matter_name : null;
+  const subtitle = [matterSubtitle, node.vendor, node.product].filter(Boolean).join(" · ");
   const assessment = assess(node, data);
   const events =
     node.events && node.events.length
@@ -119,6 +133,7 @@ export function NodeDrilldown({
             rows={[
               { label: "Availability", value: boolText(node.available, "Available", "Unavailable") },
               { label: "Health", value: orDash(node.health) },
+              { label: "Reason", value: orDash(node.classification_reason || node.health_reason) },
               { label: "Server", value: orDash(node.server_id as string | number | null) },
               { label: "Vendor", value: orDash(node.vendor) },
               { label: "Product", value: orDash(node.product) },

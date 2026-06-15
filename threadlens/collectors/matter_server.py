@@ -472,6 +472,8 @@ class MatterServerObserver:
                 existing.last_unsupported_probe_paths if existing else None
             ),
             last_read_probe_note=existing.last_read_probe_note if existing else None,
+            ha_device_name=existing.ha_device_name if existing else None,
+            ha_entity_id=existing.ha_entity_id if existing else None,
         )
         self._nodes[node_id] = state
         await self._repository.upsert_model_state(
