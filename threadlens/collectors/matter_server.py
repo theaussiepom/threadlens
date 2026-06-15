@@ -347,6 +347,17 @@ class MatterServerObserver:
         for node_payload in nodes:
             await self._process_node(node_payload, is_initial=True)
         await self._persist_server_state()
+        asyncio.create_task(self._capture_thread_identities_for_available_nodes())
+
+    async def _capture_thread_identities_for_available_nodes(self) -> None:
+        if not self._config.matter.probes.probes_active:
+            return
+        for node_id in sorted(self._list_available_node_ids()):
+            try:
+                await self._probe_runner().run_thread_identity_capture(node_id)
+            except Exception:  # noqa: BLE001 - identity capture must not break observer
+                continue
+        await apply_thread_identity_correlation(self._repository)
 
     async def _handle_event(self, event_type: Any, data: Any) -> None:
         if event_type in (EVENT_NODE_ADDED, EVENT_NODE_UPDATED):

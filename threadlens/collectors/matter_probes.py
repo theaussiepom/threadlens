@@ -199,6 +199,25 @@ class MatterProbeRunner:
             include_ping=include_ping,
         )
 
+    async def run_thread_identity_capture(self, node_id: int) -> MatterNodeState | None:
+        """Capture Thread IPv6 for one node via read-only ping_node."""
+        if not self._config.probes_active:
+            return None
+        if not self._is_connected():
+            return None
+        node = self._get_node(node_id)
+        if node is None or not node.available:
+            return None
+        timeout = self._config.timeout_seconds
+        _, updated = await self._run_ping(
+            node=node,
+            timeout=timeout,
+            update_ping_diagnostics=False,
+            capture_thread_identity=True,
+        )
+        await self._persist_node(updated)
+        return updated
+
     async def run_scheduled_probe(
         self,
         node_id: int,

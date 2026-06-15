@@ -2,6 +2,12 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.6] - 2026-06-15
+
+### Fixed
+
+- Capture Thread IPv6 for all available Matter nodes on Matter Server connect, not only during the slow read-probe round-robin
+
 ## [0.2.5] - 2026-06-15
 
 ### Added
