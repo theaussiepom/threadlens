@@ -49,6 +49,12 @@ _UNSUPPORTED_DETAILS_RE = re.compile(
     re.IGNORECASE,
 )
 
+_READ_PROBE_LIMITED_NOTE = (
+    "ThreadLens tried several read-only Matter attributes but could not find one this device "
+    "accepts. Identical devices can use different Matter endpoints; unsupported paths are "
+    "remembered and skipped on future probes."
+)
+
 _GENERIC_WEIGHTS = frozenset({"generic", "override"})
 
 
@@ -362,10 +368,13 @@ class MatterProbeRunner:
             limited = device_specific_unsupported or device_specific_failure
             note = None
             if device_specific_unsupported:
-                note = "A more specific blind-status read check was not supported by this device."
+                note = (
+                    "A device-specific read check was not supported on this device, but a "
+                    "basic read check succeeded."
+                )
             elif device_specific_failure:
                 note = (
-                    "A blind-status read check did not complete, but the device responded "
+                    "A device-specific read check did not complete, but the device responded "
                     "to a basic read check."
                 )
         elif generic_failure is not None:
@@ -376,11 +385,7 @@ class MatterProbeRunner:
         else:
             last_ok = None if final_outcome.limited else final_outcome.ok
             limited = final_outcome.limited
-            note = (
-                "Read diagnostics are limited for this node (unsupported attribute path)."
-                if limited
-                else None
-            )
+            note = _READ_PROBE_LIMITED_NOTE if limited else None
 
         unsupported_paths = list(node.last_unsupported_probe_paths or [])
         for outcome in outcomes:

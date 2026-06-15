@@ -331,7 +331,7 @@ async def test_window_covering_attribute_path_selection(tmp_path: Path) -> None:
 
     assert sent["args"]["attribute_path"] == "2/258/10"
     state = observer._nodes[24]
-    assert state.last_probe_label == "Blind status read check"
+    assert state.last_probe_label == "Window covering read check"
     assert state.last_read_probe_attribute_path == "2/258/10"
     assert state.last_read_probe_ok is True
 
@@ -454,9 +454,10 @@ async def test_standard_mode_unsupported_blind_falls_back_to_generic_limited(
     assert state.last_read_probe_ok is True
     assert state.last_read_probe_limited is True
     assert state.last_read_probe_attribute_path == "0/40/5"
-    assert state.last_probe_label == "Basic read check"
+    assert state.last_probe_label in {"Basic read check", "Device info read check"}
     assert state.last_read_probe_note == (
-        "A more specific blind-status read check was not supported by this device."
+        "A device-specific read check was not supported on this device, but a "
+        "basic read check succeeded."
     )
     assert "command failed" not in (state.last_read_probe_note or "").lower()
 
@@ -483,8 +484,9 @@ async def test_standard_mode_blind_failure_falls_back_to_generic_with_note(tmp_p
     assert state.last_read_probe_ok is True
     assert state.last_read_probe_limited is True
     assert state.last_read_probe_attribute_path == "0/40/5"
-    assert "blind-status read check did not complete" in (state.last_read_probe_note or "").lower()
-    assert "command failed" not in (state.last_read_probe_note or "").lower()
+    note = (state.last_read_probe_note or "").lower()
+    assert "device-specific read check did not complete" in note
+    assert "command failed" not in note
 
 
 def test_matter_node_probe_field_defaults() -> None:

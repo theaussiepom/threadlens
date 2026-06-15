@@ -32,6 +32,8 @@ export interface ReadProbeDiagnostics {
   successes_24h: number | null;
   summary: string | null;
   note?: string | null;
+  successful_path?: string | null;
+  unsupported_paths?: string[];
 }
 
 export interface PingProbeDiagnostics {
@@ -182,6 +184,8 @@ export interface MatterNode {
 
 export interface MatterSection {
   health: HealthState;
+  reasons?: Reason[];
+  reasons_all?: Reason[];
   servers: number;
   servers_connected: number;
   node_count: number;

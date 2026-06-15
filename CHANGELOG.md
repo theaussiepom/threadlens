@@ -2,6 +2,20 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.7] - 2026-06-14
+
+### Added
+
+- Read probe planner discovers candidate attribute paths from each node's own Matter attribute keys before falling back to generic paths
+- Matter servers section shows health reason chips when Matter health is not OK
+- Collapsible status legend on Matter node health defines what "Recently unstable", "Diagnostics limited", and "24h" mean
+
+### Changed
+
+- Clearer read-probe limited messaging explaining why identical devices can differ by Matter endpoint
+- Drilldown shows working probe path and unsupported paths; diagnostics-limited nodes no longer get the "insufficient event history" assessment
+- TREL section no longer shows confusing "raw health" when it differs from display health
+
 ## [0.2.6] - 2026-06-15
 
 ### Fixed

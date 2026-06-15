@@ -3,6 +3,7 @@ import { fmtRelative } from "../utils/format";
 import { nodeClassMeta } from "../utils/health";
 import { nodeSubtitleParts } from "../utils/nodeIdentity";
 import { Badge, Card, EmptyHint } from "./primitives";
+import { StatusLegend } from "./StatusLegend";
 
 const GROUP_ORDER: { key: string; title: string }[] = [
   { key: "unavailable", title: "Unavailable" },
@@ -51,7 +52,7 @@ function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: Matter
   const readProbeHint =
     overviewLabel ||
     (readProbe?.limited
-      ? "Read diagnostics limited"
+      ? "Read checks unavailable"
       : readProbe?.last_ok === false
         ? "Read probe issue"
         : null);
@@ -157,6 +158,7 @@ export function MatterNodeHealth({
 
   return (
     <Card title="Matter node health" actions={counts}>
+      <StatusLegend />
       <div className="tl-node-groups">
         {GROUP_ORDER.filter(({ key }) => (grouped.get(key) ?? []).length > 0).map(({ key, title }) => {
           const group = grouped.get(key) ?? [];
