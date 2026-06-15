@@ -2,6 +2,23 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.18] - 2026-06-16
+
+### Changed
+
+- **MQTT Discovery:** clean Lens-family global summary entities (health, issues, bucket counts, Matter read probe issues)
+- **MQTT Discovery:** `per_node_entities` defaults to `false`; per-node entities only when explicitly enabled
+- **MQTT Discovery:** new topic layout under `homeassistant/sensor/threadlens/<entity_key>/config` and `threadlens/summary/<entity_key>/state`
+- **MQTT Discovery:** backward compatibility intentionally not preserved; migration docs for clearing old retained discovery configs
+- **Release process:** [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) aligned with Lens family release language ([docs/lens-family.md](docs/lens-family.md))
+
+### Notes
+
+- Matter read probe **behaviour is unchanged** from the validated model; read probe issues remain a global summary entity only
+- No Matter control commands in normal operation
+- HACS companion entities are separate from MQTT summary entities and were preserved during Ben's deployment migration
+- HACS UI was source-validated; full browser visual smoke was not part of this release
+
 ## [0.2.15] - 2026-06-15
 
 ### Added
