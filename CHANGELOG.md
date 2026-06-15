@@ -2,6 +2,14 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [Unreleased]
+
+## [0.2.19] - 2026-06-16
+
+### Changed
+
+- Version metadata aligned to **0.2.19** in package sources and `/api/v1/version` (cosmetic fix; no functional change from v0.2.18 clean MQTT release)
+
 ## [0.2.18] - 2026-06-16
 
 ### Changed
