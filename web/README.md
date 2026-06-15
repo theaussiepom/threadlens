@@ -48,8 +48,8 @@ npm run build
 After `npm run build`, start Core with `THREADLENS_STATIC_DIR` pointing at `../static`
 and open `http://127.0.0.1:8128/`. Confirm:
 
-- Dashboard loads (no blank screen); header, incident, Matter node health, infrastructure,
-  reports, and collapsed diagnostics render.
+- Dashboard loads (no blank screen); sidebar nav, overview stats, devices, infrastructure,
+  timeline, reports, and diagnostics render.
 - `GET /api/v1/health` and `/api/v1/dashboard` return JSON (not dashboard HTML).
 - `/node/test` falls back to the dashboard index; `/api/v1/does-not-exist` returns API 404.
 - Report YAML/JSON links use relative `api/v1/report.*` paths (no HA proxy).
@@ -66,11 +66,13 @@ web/
   vite.config.ts
   src/
     main.tsx
-    App.tsx             # layout + state (selected node), no router (single page)
+    App.tsx             # React Router + AppShell layout
     api/                # path-safe URLs, fetch client, payload types
     hooks/useDashboard  # 30s polling, loading/error/stale handling
-    components/         # Header, IncidentSummary, MatterNodeHealth, NodeDrilldown,
-                        # OTBR/TREL/infra sections, Reports, Diagnostics, state views
-    utils/              # formatting + health/classification mapping
-    styles/             # theme.css (tokens, light/dark) + app.css (mobile-first)
+    context/            # shared dashboard state
+    pages/              # Overview, Devices, Infrastructure, Timeline, Reports, Diagnostics
+    components/         # AppShell, ui primitives, domain cards
+    lib/                # severity, node identity, ingress basename
+    utils/              # formatting + status legend copy
+    index.css           # Tailwind v4 + zl-* theme tokens
 ```

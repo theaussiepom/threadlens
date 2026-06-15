@@ -2,6 +2,16 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.12] - 2026-06-15
+
+### Changed
+
+- Devices page always shows healthy Matter nodes (removed Show/Hide toggle)
+
+### Removed
+
+- Legacy single-page dashboard components and CSS (`theme.css`, `app.css`, modal drilldown, infra column layout) superseded by the 0.2.11 router UI
+
 ## [0.2.11] - 2026-06-15
 
 ### Changed
