@@ -142,6 +142,7 @@ export interface MatterNode {
   matter_name?: string | null;
   ha_device_name?: string | null;
   ha_entity_id?: string | null;
+  otbr_ids?: string[];
   available: boolean | null;
   health: string;
   health_reason: string | null;

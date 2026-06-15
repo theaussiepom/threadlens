@@ -2,6 +2,14 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.4] - 2026-06-15
+
+### Changed
+
+- Matter node list and drilldown always show the Matter server name (`friendly_name`), not only when it differs from the HA label
+- Drilldown shows configured OTBR ids, HA name, and read probe evidence (failures, path, last result) in the primary details table
+- Node rows include `otbr_ids` from configured OTBRs on the dashboard payload
+
 ## [0.2.3] - 2026-06-15
 
 Dashboard and HA enrichment release after Study Pi read-probe validation.

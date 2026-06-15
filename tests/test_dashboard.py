@@ -9,7 +9,7 @@ from threadlens.server.dashboard import (
     humanize_reason,
 )
 
-VERSION = {"tool": "ThreadLens", "version": "0.2.3"}
+VERSION = {"tool": "ThreadLens", "version": "0.2.4"}
 
 HEALTHY_HEALTH = {
     "overall": {"state": "healthy", "reasons": []},
@@ -84,7 +84,7 @@ def _healthy_payload():
 def test_healthy_payload_shape():
     payload = _healthy_payload()
     assert payload["threadlens"]["api_connected"] is True
-    assert payload["threadlens"]["version"] == "0.2.3"
+    assert payload["threadlens"]["version"] == "0.2.4"
     assert payload["threadlens"]["overall_health"] == "healthy"
     assert payload["threadlens"]["environment_health"] == "healthy"
     assert payload["threadlens"]["reasons"] == []

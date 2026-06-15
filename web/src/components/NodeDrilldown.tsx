@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { DashboardPayload, MatterNode } from "../api/types";
 import { boolText, fmtDuration, fmtTime, orDash } from "../utils/format";
 import { nodeClassMeta } from "../utils/health";
+import { formatOtbrIds, nodeDrilldownSubtitle } from "../utils/nodeIdentity";
 import { Badge, KeyValue } from "./primitives";
 
 const INFRA_DEGRADED_EVENTS = new Set([
@@ -93,10 +94,11 @@ export function NodeDrilldown({
   }, [onClose]);
 
   const meta = nodeClassMeta(node.classification);
-  const matterSubtitle =
-    node.matter_name && node.matter_name !== node.name ? node.matter_name : null;
-  const subtitle = [matterSubtitle, node.vendor, node.product].filter(Boolean).join(" · ");
+  const subtitle = nodeDrilldownSubtitle(node);
   const assessment = assess(node, data);
+  const readProbe = node.read_probe;
+  const showReadProbeSummary =
+    Boolean(readProbe?.diagnostics_available) && !readProbe?.limited;
   const events =
     node.events && node.events.length
       ? node.events
@@ -134,10 +136,33 @@ export function NodeDrilldown({
               { label: "Availability", value: boolText(node.available, "Available", "Unavailable") },
               { label: "Health", value: orDash(node.health) },
               { label: "Reason", value: orDash(node.classification_reason || node.health_reason) },
-              { label: "Server", value: orDash(node.server_id as string | number | null) },
+              ...(node.ha_device_name
+                ? [{ label: "HA name", value: orDash(node.ha_device_name) }]
+                : []),
+              { label: "Matter name", value: orDash(node.matter_name) },
+              { label: "Matter server", value: orDash(node.server_id as string | number | null) },
+              { label: "OTBR", value: orDash(formatOtbrIds(node.otbr_ids)) },
               { label: "Vendor", value: orDash(node.vendor) },
               { label: "Product", value: orDash(node.product) },
               { label: "Firmware", value: orDash(node.firmware) },
+              ...(showReadProbeSummary
+                ? [
+                    {
+                      label: "Last read probe",
+                      value: readProbe?.limited
+                        ? "Limited"
+                        : boolText(readProbe?.last_ok, "OK", "Failed"),
+                    },
+                    {
+                      label: "Read failures (24h)",
+                      value: readProbe?.failures_24h ?? "—",
+                    },
+                    {
+                      label: "Read probe path",
+                      value: orDash(readProbe?.attribute_path),
+                    },
+                  ]
+                : []),
               { label: "Last seen", value: fmtTime(node.last_seen) },
               { label: "Last unavailable", value: fmtTime(node.last_unavailable) },
               { label: "Unavailable (24h)", value: node.unsubscribe_count_24h || 0 },
