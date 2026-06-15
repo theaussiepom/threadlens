@@ -8,7 +8,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
-    "moduleDetection": "force",
+    "types": ["node"],
     "noEmit": true,
 
     "strict": true,

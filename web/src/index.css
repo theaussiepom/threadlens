@@ -1,0 +1,63 @@
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "tailwindcss";
+
+/* ZigbeeLens sibling palette — dark diagnostic console */
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-zl-bg: #0b0f14;
+  --color-zl-surface: #121820;
+  --color-zl-surface-2: #1a2330;
+  --color-zl-border: #2a3544;
+  --color-zl-text: #e8edf4;
+  --color-zl-muted: #8b98a8;
+  --color-zl-accent: #5b9fd4;
+  --color-zl-healthy: #3ecf8e;
+  --color-zl-watch: #e6b84a;
+  --color-zl-incident: #ef7b5b;
+  --color-zl-critical: #e05252;
+}
+
+body {
+  @apply bg-zl-bg text-zl-text font-sans antialiased;
+  margin: 0;
+  overflow-x: clip;
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+button,
+select,
+input[type="text"],
+input[type="search"],
+input[type="number"] {
+  min-height: 2.75rem;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b98a8' d='M2.4 4.2l3.6 3.6 3.6-3.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  padding-right: 2rem;
+}
+
+details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}

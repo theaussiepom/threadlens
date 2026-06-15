@@ -11,6 +11,8 @@ export interface DashboardStatus {
   /** True once at least one fetch has completed (success or failure). */
   hasLoaded: boolean;
   lastUpdated: Date | null;
+  /** Whether the latest payload reports the Core API as connected. */
+  connected: boolean;
   refresh: () => void;
 }
 
@@ -63,5 +65,13 @@ export function useDashboard(): DashboardStatus {
     };
   }, [load]);
 
-  return { data, error, loading, hasLoaded, lastUpdated, refresh: load };
+  return {
+    data,
+    error,
+    loading,
+    hasLoaded,
+    lastUpdated,
+    connected: Boolean(data?.threadlens?.api_connected),
+    refresh: load,
+  };
 }

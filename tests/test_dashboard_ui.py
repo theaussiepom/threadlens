@@ -91,38 +91,36 @@ def test_source_has_no_external_origins() -> None:
         assert "cdn." not in text, path
 
 
-def test_source_supports_light_and_dark_theme() -> None:
-    theme = (WEB_SRC / "styles" / "theme.css").read_text(encoding="utf-8")
-    assert "prefers-color-scheme: dark" in theme
+def test_source_uses_dark_zl_theme() -> None:
+    css = (WEB_SRC / "index.css").read_text(encoding="utf-8")
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    assert "--color-zl-bg" in css
+    assert "color-scheme: dark" in html
 
 
 def test_source_is_mobile_first_responsive() -> None:
-    css = (WEB_SRC / "styles" / "app.css").read_text(encoding="utf-8")
-    # Mobile-first: enhancements gated behind min-width breakpoints.
-    assert "min-width: 600px" in css
-    assert "min-width: 960px" in css
+    app_shell = (WEB_SRC / "components" / "AppShell.tsx").read_text(encoding="utf-8")
+    # Mobile nav + desktop sidebar; Tailwind min-width enhancements.
+    assert "lg:hidden" in app_shell
+    assert "lg:flex" in app_shell
+    assert "sm:px-6" in app_shell
 
 
-def test_source_infra_sections_use_balanced_flex_columns_on_desktop() -> None:
-    css = (WEB_SRC / "styles" / "app.css").read_text(encoding="utf-8")
+def test_source_uses_router_pages_not_single_scroll_layout() -> None:
     app = (WEB_SRC / "App.tsx").read_text(encoding="utf-8")
-    assert ".tl-infra-layout" in css
-    assert ".tl-infra-col" in css
-    assert ".tl-infra-measure" in css
-    assert "InfraColumnLayout" in app
-    assert 'id: "reports"' in app
-    balance_src = (WEB_SRC / "utils" / "balanceColumns.ts").read_text(encoding="utf-8")
-    assert "balanceIntoTwoColumns" in balance_src
-    assert "flex-direction: row" in css
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" not in css
-    assert "columns: 2" not in css
+    assert "BrowserRouter" in app
+    assert "AppShell" in app
+    assert "OverviewPage" in app
+    assert "InfrastructurePage" in app
+    assert "ReportsPage" in app
+    assert "InfraColumnLayout" not in app
 
 
-def test_reports_card_is_compact() -> None:
-    reports = (WEB_SRC / "components" / "Reports.tsx").read_text(encoding="utf-8")
-    assert "tl-card-compact" in reports
-    assert "tl-btn-small" in reports
+def test_reports_page_uses_keyvalue_and_relative_links() -> None:
+    reports = (WEB_SRC / "pages" / "ReportsPage.tsx").read_text(encoding="utf-8")
     assert "KeyValue" in reports
+    assert "resolveUrl" in reports
+    assert "REPORT_YAML_PATH" in reports
 
 
 # ---- Built-output checks (run only when the dashboard has been built) ----
