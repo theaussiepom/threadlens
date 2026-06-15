@@ -1,7 +1,7 @@
 {
   "name": "threadlens-dashboard",
   "private": true,
-  "version": "0.2.7",
+  "version": "0.2.8",
   "type": "module",
   "description": "Core-owned React dashboard for ThreadLens (served by ThreadLens Core)",
   "scripts": {

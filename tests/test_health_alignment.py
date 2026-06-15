@@ -46,7 +46,7 @@ def test_compute_health_summary_downgrades_informational_only_warnings():
 def test_dashboard_payload_and_compute_health_summary_agree():
     payload = build_dashboard_payload(
         connected=True,
-        version={"tool": "ThreadLens", "version": "0.2.7"},
+        version={"tool": "ThreadLens", "version": "0.2.8"},
         status={"collectors": {}},
         health=RECONCILED_HEALTH,
         otbrs=RECONCILED_OTBRS,

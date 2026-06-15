@@ -421,7 +421,7 @@ def test_matter_probe_config_defaults() -> None:
 
 
 @pytest.mark.asyncio
-async def test_standard_mode_unsupported_blind_falls_back_to_generic_limited(
+async def test_standard_mode_unsupported_device_falls_back_to_generic_ok(
     tmp_path: Path,
 ) -> None:
     probes = MatterProbeConfig(
@@ -452,18 +452,16 @@ async def test_standard_mode_unsupported_blind_falls_back_to_generic_limited(
 
     state = observer._nodes[24]
     assert state.last_read_probe_ok is True
-    assert state.last_read_probe_limited is True
+    assert state.last_read_probe_limited is False
     assert state.last_read_probe_attribute_path == "0/40/5"
     assert state.last_probe_label in {"Basic read check", "Device info read check"}
-    assert state.last_read_probe_note == (
-        "A device-specific read check was not supported on this device, but a "
-        "basic read check succeeded."
-    )
-    assert "command failed" not in (state.last_read_probe_note or "").lower()
+    assert state.last_read_probe_note is None
 
 
 @pytest.mark.asyncio
-async def test_standard_mode_blind_failure_falls_back_to_generic_with_note(tmp_path: Path) -> None:
+async def test_standard_mode_device_specific_failure_falls_back_to_generic_ok(
+    tmp_path: Path,
+) -> None:
     probes = MatterProbeConfig(
         mode=ProbeMode.STANDARD,
         advanced=MatterProbeAdvancedConfig(
@@ -482,11 +480,9 @@ async def test_standard_mode_blind_failure_falls_back_to_generic_with_note(tmp_p
 
     state = observer._nodes[24]
     assert state.last_read_probe_ok is True
-    assert state.last_read_probe_limited is True
+    assert state.last_read_probe_limited is False
     assert state.last_read_probe_attribute_path == "0/40/5"
-    note = (state.last_read_probe_note or "").lower()
-    assert "device-specific read check did not complete" in note
-    assert "command failed" not in note
+    assert state.last_read_probe_note is None
 
 
 def test_matter_node_probe_field_defaults() -> None:
