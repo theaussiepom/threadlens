@@ -25,14 +25,14 @@ class MatterServerVariant(StrEnum):
 
 
 class ProbeMode(StrEnum):
-    OFF = "off"
+    DISABLED = "disabled"
     CONSERVATIVE = "conservative"
     STANDARD = "standard"
     DIAGNOSTIC = "diagnostic"
 
 
 _MODE_DEFAULT_INTERVAL_SECONDS: dict[ProbeMode, int] = {
-    ProbeMode.OFF: 3600,
+    ProbeMode.DISABLED: 3600,
     ProbeMode.CONSERVATIVE: 3600,
     ProbeMode.STANDARD: 1800,
     ProbeMode.DIAGNOSTIC: 900,
@@ -134,10 +134,19 @@ class MatterProbeConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mode: ProbeMode = ProbeMode.OFF
+    mode: ProbeMode = ProbeMode.DISABLED
     manual_enabled: bool = True
     schedule_enabled: bool = False
     advanced: MatterProbeAdvancedConfig = Field(default_factory=MatterProbeAdvancedConfig)
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def _normalize_probe_mode(cls, value: Any) -> Any:
+        if value is False:
+            return ProbeMode.DISABLED
+        if isinstance(value, str) and value.strip().lower() == "off":
+            return ProbeMode.DISABLED
+        return value
 
     @property
     def effective_mode(self) -> ProbeMode:
@@ -145,7 +154,7 @@ class MatterProbeConfig(BaseModel):
 
     @property
     def probes_active(self) -> bool:
-        return self.mode != ProbeMode.OFF
+        return self.mode != ProbeMode.DISABLED
 
     @property
     def interval_seconds(self) -> int:

@@ -248,12 +248,14 @@ class MatterProbeRunner:
 
             if outcome.limited:
                 continue
+            if outcome.ok and candidate.health_weight == "device_specific":
+                break
             if outcome.ok and _is_generic_candidate(candidate):
                 if self._config.effective_mode == ProbeMode.CONSERVATIVE:
                     break
                 continue
-            if outcome.ok and candidate.health_weight == "device_specific":
-                break
+            if outcome.ok is False and candidate.health_weight == "device_specific":
+                continue
             if outcome.ok is False and _is_generic_candidate(candidate):
                 continue
 
@@ -284,6 +286,14 @@ class MatterProbeRunner:
         if not outcomes:
             return node
 
+        device_specific_success = next(
+            (
+                outcome
+                for outcome in outcomes
+                if outcome.ok is True and outcome.candidate.health_weight == "device_specific"
+            ),
+            None,
+        )
         generic_success = next(
             (
                 outcome
@@ -304,27 +314,30 @@ class MatterProbeRunner:
             outcome.limited and outcome.candidate.health_weight == "device_specific"
             for outcome in outcomes
         )
-        device_specific_failure = next(
-            (
-                outcome
-                for outcome in outcomes
-                if outcome.ok is False and outcome.candidate.health_weight == "device_specific"
-            ),
-            None,
+        device_specific_failure = any(
+            outcome.ok is False
+            and not outcome.limited
+            and outcome.candidate.health_weight == "device_specific"
+            for outcome in outcomes
         )
 
         final_outcome = outcomes[-1]
-        if generic_success is not None:
-            final_outcome = generic_success
+        if device_specific_success is not None:
+            final_outcome = device_specific_success
             last_ok: bool | None = True
-            limited = device_specific_unsupported
+            limited = False
+            note = None
+        elif generic_success is not None:
+            final_outcome = generic_success
+            last_ok = True
+            limited = device_specific_unsupported or device_specific_failure
             note = None
             if device_specific_unsupported:
-                note = "A more specific device read check was not supported by this device."
-            elif device_specific_failure is not None:
+                note = "A more specific blind-status read check was not supported by this device."
+            elif device_specific_failure:
                 note = (
-                    "Generic read checks succeeded, but a more specific device read "
-                    "check did not receive a successful response."
+                    "A blind-status read check did not complete, but the device responded "
+                    "to a basic read check."
                 )
         elif generic_failure is not None:
             final_outcome = generic_failure

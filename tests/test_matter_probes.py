@@ -60,6 +60,7 @@ async def _observer_with_node(
     node_id: int = 24,
     available: bool = True,
     attribute_keys: list[str] | None = None,
+    product: str | None = None,
     probes: MatterProbeConfig | None = None,
 ) -> MatterServerObserver:
     repository = await _make_repo(tmp_path)
@@ -72,9 +73,18 @@ async def _observer_with_node(
         matter_servers=[SERVER],
     )
     observer = MatterServerObserver(config, SERVER, repository)
-    payload = _node_payload(node_id, available=available, label="Living Blind 3")
+    payload = _node_payload(
+        node_id,
+        available=available,
+        label="Living Blind 3",
+        product=product,
+    )
     if attribute_keys is not None:
-        payload["attributes"] = {key: "cached" for key in attribute_keys}
+        attrs = {key: "cached" for key in attribute_keys}
+        if product is not None:
+            attrs["0/40/3"] = product
+        attrs.setdefault("0/40/5", "Living Blind 3")
+        payload["attributes"] = attrs
     await observer._process_node(payload)
     observer._websocket = FakeWebsocket([])
     observer.connected = True
@@ -316,11 +326,14 @@ async def test_window_covering_attribute_path_selection(tmp_path: Path) -> None:
     )
 
     probe_task = asyncio.create_task(observer.run_manual_read_probe(24))
-    await _dispatch_command(observer, "read_attribute", result={"0/40/5": "ok"})
     sent = await _dispatch_command(observer, "read_attribute", result={"2/258/10": 50})
     await probe_task
 
     assert sent["args"]["attribute_path"] == "2/258/10"
+    state = observer._nodes[24]
+    assert state.last_probe_label == "Blind status read check"
+    assert state.last_read_probe_attribute_path == "2/258/10"
+    assert state.last_read_probe_ok is True
 
 
 def test_resolve_read_probe_attribute_path_uses_planner_fallback() -> None:
@@ -395,7 +408,7 @@ async def test_probe_fields_preserved_on_passive_node_update(tmp_path: Path) -> 
 
 def test_matter_probe_config_defaults() -> None:
     config = MatterProbeConfig()
-    assert config.mode == ProbeMode.OFF
+    assert config.mode == ProbeMode.DISABLED
     assert config.schedule_enabled is False
     assert config.manual_enabled is True
     assert config.timeout_seconds == 10.0
@@ -404,7 +417,74 @@ def test_matter_probe_config_defaults() -> None:
     assert config.jitter_seconds == 300
     assert config.attributes.fallback == ["0/40/2", "0/40/4", "0/40/5"]
     assert config.attributes.window_covering == ["1/258/10"]
-    assert config.effective_mode == ProbeMode.OFF
+    assert config.effective_mode == ProbeMode.DISABLED
+
+
+@pytest.mark.asyncio
+async def test_standard_mode_unsupported_blind_falls_back_to_generic_limited(
+    tmp_path: Path,
+) -> None:
+    probes = MatterProbeConfig(
+        mode=ProbeMode.STANDARD,
+        advanced=MatterProbeAdvancedConfig(
+            attributes=MatterProbeAttributesConfig(
+                fallback=["0/40/5"],
+                window_covering=["1/258/10"],
+            )
+        ),
+    )
+    observer = await _observer_with_node(
+        tmp_path,
+        probes=probes,
+        attribute_keys=["0/40/5"],
+        product="Living Blind",
+    )
+
+    probe_task = asyncio.create_task(observer.run_manual_read_probe(24))
+    await _dispatch_command(
+        observer,
+        "read_attribute",
+        error_code=7,
+        details="Unsupported attribute path 1/258/10",
+    )
+    await _dispatch_command(observer, "read_attribute", result={"0/40/5": "ok"})
+    await probe_task
+
+    state = observer._nodes[24]
+    assert state.last_read_probe_ok is True
+    assert state.last_read_probe_limited is True
+    assert state.last_read_probe_attribute_path == "0/40/5"
+    assert state.last_probe_label == "Basic read check"
+    assert state.last_read_probe_note == (
+        "A more specific blind-status read check was not supported by this device."
+    )
+    assert "command failed" not in (state.last_read_probe_note or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_standard_mode_blind_failure_falls_back_to_generic_with_note(tmp_path: Path) -> None:
+    probes = MatterProbeConfig(
+        mode=ProbeMode.STANDARD,
+        advanced=MatterProbeAdvancedConfig(
+            attributes=MatterProbeAttributesConfig(
+                fallback=["0/40/5"],
+                window_covering=["1/258/10"],
+            )
+        ),
+    )
+    observer = await _observer_with_node(tmp_path, probes=probes, product="Living Blind")
+
+    probe_task = asyncio.create_task(observer.run_manual_read_probe(24))
+    await _dispatch_command(observer, "read_attribute", error_code=3, details="NodeNotReady")
+    await _dispatch_command(observer, "read_attribute", result={"0/40/5": "ok"})
+    await probe_task
+
+    state = observer._nodes[24]
+    assert state.last_read_probe_ok is True
+    assert state.last_read_probe_limited is True
+    assert state.last_read_probe_attribute_path == "0/40/5"
+    assert "blind-status read check did not complete" in (state.last_read_probe_note or "").lower()
+    assert "command failed" not in (state.last_read_probe_note or "").lower()
 
 
 def test_matter_node_probe_field_defaults() -> None:

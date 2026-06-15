@@ -48,6 +48,42 @@ def test_standard_mode_adds_window_covering_from_endpoint_data() -> None:
         if candidate.kind == "window_covering_status"
     ]
     assert "2/258/10" in device_paths
+    assert candidates[0].kind == "window_covering_status"
+    assert candidates[0].attribute_path == "2/258/10"
+
+
+def test_standard_mode_device_specific_before_generic_fallback() -> None:
+    config = MatterProbeConfig(mode=ProbeMode.STANDARD)
+    node = _node(product="Dendo SCM Matter Shade")
+    candidates = MatterProbePlanner().plan(
+        node,
+        attribute_keys=frozenset({"0/40/2"}),
+        config=config,
+    )
+    assert candidates[0].kind == "window_covering_status"
+    assert candidates[0].attribute_path == "1/258/10"
+    assert any(candidate.kind == "basic_information" for candidate in candidates)
+
+
+def test_standard_mode_uses_inferred_window_covering_fallback_path() -> None:
+    config = MatterProbeConfig(mode=ProbeMode.STANDARD)
+    node = _node(product="Living Shade", inferred_device_types=["Window Covering"])
+    candidates = MatterProbePlanner().plan(
+        node,
+        attribute_keys=frozenset({"0/40/2"}),
+        config=config,
+    )
+    assert candidates[0].attribute_path == "1/258/10"
+
+
+def test_conservative_mode_excludes_descriptor_reads() -> None:
+    config = MatterProbeConfig(mode=ProbeMode.CONSERVATIVE)
+    candidates = MatterProbePlanner().plan(
+        _node(),
+        attribute_keys=frozenset({"0/29/0", "0/40/2"}),
+        config=config,
+    )
+    assert all(candidate.kind != "descriptor" for candidate in candidates)
 
 
 def test_per_node_override_is_first_candidate() -> None:

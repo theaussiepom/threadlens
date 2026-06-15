@@ -87,7 +87,7 @@ matter:
   reconnect_max_seconds: 60
   request_timeout_seconds: 10
   probes:
-    mode: off
+    mode: disabled
     manual_enabled: true
     schedule_enabled: false
 
@@ -109,9 +109,15 @@ matter:
     schedule_enabled: true
 ```
 
-Supported modes: `off`, `conservative`, `standard`, `diagnostic`.
+Supported modes: `disabled`, `conservative`, `standard`, `diagnostic`.
+
+Use `mode: disabled` to turn probes off. Earlier validation builds also accepted `"off"`, but `disabled` is preferred because some YAML parsers treat unquoted `off` as a boolean.
 
 Timing, ping, attribute overrides, and per-node settings live under `matter.probes.advanced`.
+
+### Temporary validation interval
+
+During live validation only, you may shorten the probe interval to rotate through nodes faster. See [matter-read-probes.md](matter-read-probes.md) for an example. Return to a longer interval after validation.
 
 Example with advanced overrides:
 

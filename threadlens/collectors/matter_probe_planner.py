@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from threadlens.config import MatterProbeConfig, ProbeMode
+from threadlens.config import (
+    MatterProbeAdvancedConfig,
+    MatterProbeConfig,
+    MatterProbePerNodeOverride,
+    ProbeMode,
+)
 from threadlens.models.state import MatterNodeState
 
 WINDOW_COVERING_CLUSTER = 258
@@ -79,66 +84,98 @@ class MatterProbePlanner:
         config: MatterProbeConfig,
     ) -> list[ProbeCandidate]:
         mode = config.effective_mode
-        if mode == ProbeMode.OFF:
+        if mode == ProbeMode.DISABLED:
             return []
 
         keys = attribute_keys or frozenset(node.matter_attribute_keys or [])
         unsupported = set(node.last_unsupported_probe_paths or [])
         advanced = config.advanced
-        node_key = str(node.node_id)
-        per_node = advanced.per_node.get(node_key)
+        per_node = advanced.per_node.get(str(node.node_id))
         if per_node is not None and per_node.disabled:
             return []
 
+        overrides = self._override_candidates(per_node)
+        cached = self._cached_success_candidate(node, unsupported)
+        generics = self._generic_candidates(advanced)
+        device_specific = (
+            self._device_specific_candidates(node=node, attribute_keys=keys, config=config)
+            if mode in {ProbeMode.STANDARD, ProbeMode.DIAGNOSTIC}
+            else []
+        )
+        descriptors = self._descriptor_candidates(keys) if mode == ProbeMode.DIAGNOSTIC else []
+
+        if mode == ProbeMode.CONSERVATIVE:
+            ordered = [*overrides, *cached, *generics]
+        elif mode == ProbeMode.STANDARD:
+            ordered = [*overrides, *device_specific, *cached, *generics]
+        else:
+            ordered = [*overrides, *device_specific, *cached, *generics, *descriptors]
+
+        return [
+            candidate
+            for candidate in _dedupe_candidates(ordered)
+            if candidate.attribute_path not in unsupported
+        ]
+
+    def _override_candidates(
+        self,
+        per_node: MatterProbePerNodeOverride | None,
+    ) -> list[ProbeCandidate]:
+        if per_node is None:
+            return []
+        return [
+            ProbeCandidate(
+                kind="override",
+                label="Configured read check",
+                attribute_path=path,
+                required=True,
+                health_weight="override",
+            )
+            for path in per_node.preferred
+        ]
+
+    def _cached_success_candidate(
+        self,
+        node: MatterNodeState,
+        unsupported: set[str],
+    ) -> list[ProbeCandidate]:
+        if not node.last_successful_probe_path or node.last_successful_probe_path in unsupported:
+            return []
+        return [
+            ProbeCandidate(
+                kind=node.last_successful_probe_kind or "cached",
+                label=node.last_probe_label or "Previous read check",
+                attribute_path=node.last_successful_probe_path,
+                required=False,
+                health_weight="generic",
+            )
+        ]
+
+    def _generic_candidates(self, advanced: MatterProbeAdvancedConfig) -> list[ProbeCandidate]:
+        return [
+            ProbeCandidate(
+                kind="basic_information",
+                label="Basic read check",
+                attribute_path=path,
+                required=False,
+                health_weight="generic",
+            )
+            for path in advanced.attributes.fallback
+        ]
+
+    def _descriptor_candidates(self, attribute_keys: frozenset[str]) -> list[ProbeCandidate]:
         candidates: list[ProbeCandidate] = []
-
-        if per_node is not None:
-            for path in per_node.preferred:
-                candidates.append(
-                    ProbeCandidate(
-                        kind="override",
-                        label="Configured read check",
-                        attribute_path=path,
-                        required=True,
-                        health_weight="override",
-                    )
-                )
-
-        if node.last_successful_probe_path and node.last_successful_probe_path not in unsupported:
+        for endpoint in endpoints_with_cluster(attribute_keys, DESCRIPTOR_CLUSTER):
             candidates.append(
                 ProbeCandidate(
-                    kind=node.last_successful_probe_kind or "cached",
-                    label=node.last_probe_label or "Previous read check",
-                    attribute_path=node.last_successful_probe_path,
+                    kind="descriptor",
+                    label="Descriptor read check",
+                    attribute_path=f"{endpoint}/{DESCRIPTOR_CLUSTER}/0",
                     required=False,
                     health_weight="generic",
                 )
             )
-
-        for path in advanced.attributes.fallback:
-            candidates.append(
-                ProbeCandidate(
-                    kind="basic_information",
-                    label="Basic read check",
-                    attribute_path=path,
-                    required=False,
-                    health_weight="generic",
-                )
-            )
-
-        descriptor_endpoints = endpoints_with_cluster(keys, DESCRIPTOR_CLUSTER)
-        if descriptor_endpoints:
-            for endpoint in descriptor_endpoints:
-                candidates.append(
-                    ProbeCandidate(
-                        kind="descriptor",
-                        label="Descriptor read check",
-                        attribute_path=f"{endpoint}/{DESCRIPTOR_CLUSTER}/0",
-                        required=False,
-                        health_weight="generic",
-                    )
-                )
-        elif mode == ProbeMode.DIAGNOSTIC:
+        if not candidates:
             candidates.append(
                 ProbeCandidate(
                     kind="descriptor",
@@ -148,22 +185,7 @@ class MatterProbePlanner:
                     health_weight="generic",
                 )
             )
-
-        if mode in {ProbeMode.STANDARD, ProbeMode.DIAGNOSTIC}:
-            candidates.extend(
-                self._device_specific_candidates(
-                    node=node,
-                    attribute_keys=keys,
-                    config=config,
-                )
-            )
-
-        filtered = [
-            candidate
-            for candidate in _dedupe_candidates(candidates)
-            if candidate.attribute_path not in unsupported
-        ]
-        return filtered
+        return candidates
 
     def _device_specific_candidates(
         self,

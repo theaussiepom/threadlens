@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from threadlens.config import (
     FlappingConfig,
     HomeAssistantConfig,
+    MatterProbeConfig,
     MatterServerVariant,
     ProbeMode,
     RuntimeMode,
@@ -55,13 +56,29 @@ def test_load_config_with_defaults() -> None:
 def test_matter_probe_config_defaults() -> None:
     config = ThreadLensConfig()
     probes = config.matter.probes
-    assert probes.mode == ProbeMode.OFF
+    assert probes.mode == ProbeMode.DISABLED
     assert probes.schedule_enabled is False
     assert probes.manual_enabled is True
     assert probes.timeout_seconds == 10.0
     assert probes.max_concurrent == 1
     assert probes.attributes.fallback == ["0/40/2", "0/40/4", "0/40/5"]
-    assert probes.effective_mode.value == "off"
+    assert probes.effective_mode.value == "disabled"
+
+
+def test_probe_mode_disabled_accepted() -> None:
+    config = MatterProbeConfig.model_validate({"mode": "disabled"})
+    assert config.mode == ProbeMode.DISABLED
+    assert config.probes_active is False
+
+
+def test_probe_mode_off_alias_maps_to_disabled() -> None:
+    config = MatterProbeConfig.model_validate({"mode": "off"})
+    assert config.mode == ProbeMode.DISABLED
+
+
+def test_probe_mode_yaml_off_boolean_maps_to_disabled() -> None:
+    config = MatterProbeConfig.model_validate({"mode": False})
+    assert config.mode == ProbeMode.DISABLED
 
 
 def test_env_override_site_name(monkeypatch: pytest.MonkeyPatch) -> None:

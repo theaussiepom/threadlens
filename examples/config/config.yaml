@@ -75,6 +75,8 @@ matter:
   request_timeout_seconds: 10
   # Optional read-only Matter read probes (disabled by default).
   # probes:
+  #   mode: disabled
+  # Or to enable:
   #   mode: conservative
   #   schedule_enabled: true
   #   advanced:
