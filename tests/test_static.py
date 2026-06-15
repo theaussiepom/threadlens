@@ -170,7 +170,7 @@ def test_dashboard_ui_allows_ha_iframe_embedding(tmp_path: Path, monkeypatch) ->
 
 
 def test_api_landing_page_includes_core_links() -> None:
-    page = api_landing_page(version="0.2.17")
+    page = api_landing_page(version="0.2.18")
     assert "Dashboard static assets are not installed" in page
     assert "/api/v1/dashboard" in page
     assert "/docs" in page
