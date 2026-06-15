@@ -94,21 +94,30 @@ See [hacs-embedded-view.md](hacs-embedded-view.md) for ThreadLens setup. The Len
 
 ## MQTT summary conventions
 
-See [mqtt-home-assistant.md](mqtt-home-assistant.md) for ThreadLens configuration. Shared rules:
+See [mqtt-home-assistant.md](mqtt-home-assistant.md) for ThreadLens configuration. Phase 3C uses a **clean global summary model** (backward compatibility not required):
 
-- **Global summary entities by default** — overall health, counts, collector status
-- **Avoid per-device entity spam** unless explicitly enabled (`per_node_entities`, etc.)
-- **`unknown` for unobserved/unavailable** values in entity state where applicable
-- **`0` only for observed zero** — never infer zero from missing data
-- **Entity names describe diagnostics**, not control (“health”, “unavailable count”, not “fix network”)
-- **Availability topic** uses `online` / `offline` for Core or product liveness
-- **No secrets** in discovery payloads or retained state
+| Pattern | Example |
+|---------|---------|
+| Discovery config | `homeassistant/sensor/threadlens/health/config` |
+| State | `threadlens/summary/health/state` |
+| Attributes | `threadlens/summary/health/attributes` |
+| Availability | `threadlens/status` (`online` / `offline`) |
+
+Shared rules:
+
+- **Global summary entities by default** — health, issues, bucket counts (ThreadLens adds read probe issues)
+- **Avoid per-device entity spam** unless explicitly enabled (`per_node_entities: false` default)
+- **`unknown` for unobserved/unavailable** — `0` only for observed zero
+- **Lens bucket attributes** on health entity (`lens_bucket`, `lens_bucket_label`, counts)
+- **Entity names describe diagnostics**, not control
+- **No secrets** in discovery payloads
+- **Migration:** clear old retained discovery configs after deploy (see product MQTT docs)
 
 ---
 
 ## Report conventions (target structure)
 
-Report generators differ today; both products aim for this **shared section vocabulary** in exports and docs:
+Lens reports share a common high-level structure but preserve protocol-specific details. Both products expose aligned section names where practical:
 
 | Section | Purpose |
 |---------|---------|
@@ -116,10 +125,14 @@ Report generators differ today; both products aim for this **shared section voca
 | `site`, `mode` | Deployment context |
 | **Executive summary** | One paragraph; no causal overclaiming |
 | **Health summary** | Lens bucket or severity counts |
-| **Active incidents** | Evidence-backed findings |
+| **Active incidents** | Evidence-backed findings with affected entities |
 | **Collector status** | What was and was not observable |
 | **Limitations** | Explicit gaps in evidence |
 | **Redaction profile** | e.g. `public_safe`, `standard` |
+| **Domain details** | Protocol-specific payloads (Zigbee networks/devices vs Thread OTBR/Matter) |
+| **Events / timeline** | Recent events for the report window |
+
+Exact JSON/YAML schemas are not identical between products. Legacy fields remain for compatibility.
 
 See [reports.md](reports.md) for ThreadLens specifics.
 
@@ -138,11 +151,8 @@ Both products follow a similar release posture:
 ThreadLens: [RELEASE.md](../RELEASE.md)  
 ZigbeeLens: [RELEASE_CHECKLIST.md](https://github.com/theaussiepom/zigbeelens/blob/main/RELEASE_CHECKLIST.md)
 
-<<<<<<< HEAD
-=======
 Both projects provide `./scripts/run-release-checks.sh` for automated pre-release validation.
 
->>>>>>> 204c298 (chore: add ThreadLens release checklist)
 ---
 
 ## Related docs

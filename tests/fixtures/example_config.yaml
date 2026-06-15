@@ -36,7 +36,7 @@ mqtt:
   retain_discovery: true
   retain_state: true
   per_trel_service_entities: false
-  per_node_entities: true
+  per_node_entities: false
 
 mdns:
   enabled: true

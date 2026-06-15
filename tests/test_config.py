@@ -30,7 +30,7 @@ def test_load_example_config() -> None:
     assert config.agent.port == 8129
     assert config.flapping.debounce_seconds == 30
     assert config.mqtt.per_trel_service_entities is False
-    assert config.mqtt.per_node_entities is True
+    assert config.mqtt.per_node_entities is False
     assert len(config.otbrs) == 1
     assert config.otbrs[0].id == "primary"
     assert len(config.matter_servers) == 1
