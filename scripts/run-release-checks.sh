@@ -91,8 +91,11 @@ echo "  Web build OK"
 
 section "Docker image (optional)"
 if command -v docker >/dev/null 2>&1; then
-  docker build -t threadlens:release-check .
-  echo "  Docker build OK"
+  if docker build -t threadlens:release-check . ; then
+    echo "  Docker build OK"
+  else
+    warn "Docker build failed (daemon unavailable?); rely on CI docker job before release"
+  fi
 else
   warn "Docker not available; skipping local docker build (CI docker job still required before release)"
 fi
