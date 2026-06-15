@@ -2,6 +2,18 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.15] - 2026-06-15
+
+### Added
+
+- **How it works** dashboard page — read-only scope, data sources, health classification, HA paths
+- SSE live updates at `/api/v1/events/stream` with 30s polling fallback when EventSource is unavailable
+- [docs/style-guide.md](docs/style-guide.md) and [docs/hacs-embedded-view.md](docs/hacs-embedded-view.md)
+
+### Changed
+
+- Dashboard connection indicator shows Live / Connecting / Polling based on SSE state
+
 ## [0.2.14] - 2026-06-15
 
 ### Changed

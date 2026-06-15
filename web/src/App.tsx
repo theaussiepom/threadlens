@@ -5,6 +5,7 @@ import { detectRouterBasename } from "@/lib/base";
 import { DeviceDetailPage } from "@/pages/DeviceDetailPage";
 import { DevicesPage } from "@/pages/DevicesPage";
 import { DiagnosticsPage } from "@/pages/DiagnosticsPage";
+import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { InfrastructurePage } from "@/pages/InfrastructurePage";
 import { OverviewPage } from "@/pages/OverviewPage";
 import { ReportsPage } from "@/pages/ReportsPage";
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="diagnostics" element={<DiagnosticsPage />} />
+            <Route path="how-it-works" element={<HowItWorksPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

@@ -49,7 +49,8 @@ After `npm run build`, start Core with `THREADLENS_STATIC_DIR` pointing at `../s
 and open `http://127.0.0.1:8128/`. Confirm:
 
 - Dashboard loads (no blank screen); sidebar nav, overview stats, devices, infrastructure,
-  timeline, reports, and diagnostics render.
+  timeline, reports, how it works, and diagnostics render.
+- Header shows **Live** when SSE connects; **Polling** when EventSource is unavailable.
 - `GET /api/v1/health` and `/api/v1/dashboard` return JSON (not dashboard HTML).
 - `/node/test` falls back to the dashboard index; `/api/v1/does-not-exist` returns API 404.
 - Report YAML/JSON links use relative `api/v1/report.*` paths (no HA proxy).
@@ -68,11 +69,11 @@ web/
     main.tsx
     App.tsx             # React Router + AppShell layout
     api/                # path-safe URLs, fetch client, payload types
-    hooks/useDashboard  # 30s polling, loading/error/stale handling
+    hooks/useDashboard  # SSE + 30s polling fallback, loading/error/stale handling
     context/            # shared dashboard state
-    pages/              # Overview, Devices, Infrastructure, Timeline, Reports, Diagnostics
+    pages/              # Overview, Devices, Infrastructure, Timeline, Reports, How it works, Diagnostics
     components/         # AppShell, ui primitives, domain cards
-    lib/                # severity, node identity, ingress basename
+    lib/                # severity, node identity, ingress basename, SSE events
     utils/              # formatting + status legend copy
     index.css           # Tailwind v4 + zl-* theme tokens
 ```

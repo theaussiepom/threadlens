@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useDashboardContext } from "@/context/DashboardContext";
+import type { ConnectionState } from "@/lib/events";
 import { fmtTimeShort } from "@/utils/format";
 
 const nav = [
@@ -8,6 +9,7 @@ const nav = [
   { to: "/infrastructure", label: "Infrastructure" },
   { to: "/timeline", label: "Timeline" },
   { to: "/reports", label: "Reports" },
+  { to: "/how-it-works", label: "How it works" },
   { to: "/diagnostics", label: "Diagnostics" },
 ];
 
@@ -19,11 +21,39 @@ function navClass(isActive: boolean): string {
   }`;
 }
 
-function ConnectionDot({ connected, loading }: { connected: boolean; loading: boolean }) {
-  const color = loading ? "bg-zl-watch animate-pulse" : connected ? "bg-zl-healthy" : "bg-zl-critical";
-  const label = loading ? "Refreshing" : connected ? "Connected" : "Disconnected";
+function ConnectionDot({
+  connected,
+  loading,
+  liveState,
+}: {
+  connected: boolean;
+  loading: boolean;
+  liveState: ConnectionState;
+}) {
+  if (loading) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-zl-muted" title="Refreshing">
+        <span className="h-2 w-2 rounded-full bg-zl-watch animate-pulse" aria-hidden="true" />
+        Refreshing
+      </span>
+    );
+  }
+  if (!connected) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-zl-muted" title="Disconnected">
+        <span className="h-2 w-2 rounded-full bg-zl-critical" aria-hidden="true" />
+        Disconnected
+      </span>
+    );
+  }
+  const map = {
+    open: { color: "bg-zl-healthy", label: "Live" },
+    connecting: { color: "bg-zl-watch animate-pulse", label: "Connecting" },
+    disconnected: { color: "bg-zl-critical", label: "Polling" },
+  } as const;
+  const { color, label } = map[liveState];
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-zl-muted" title={label}>
+    <span className="inline-flex items-center gap-1.5 text-xs text-zl-muted" title={`Event stream: ${label}`}>
       <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
       {label}
     </span>
@@ -53,7 +83,7 @@ function ModeBanner({ connected, mqttConnected }: { connected: boolean; mqttConn
 }
 
 export function AppShell() {
-  const { data, connected, loading, lastUpdated, refresh } = useDashboardContext();
+  const { data, connected, loading, liveState, lastUpdated, refresh } = useDashboardContext();
   const version = data?.threadlens?.version ?? "—";
   const apiConnected = Boolean(data?.threadlens?.api_connected);
   const mqttConnected = data?.mqtt?.connected ?? null;
@@ -93,7 +123,7 @@ export function AppShell() {
             <h1 className="hidden text-sm font-medium text-zl-muted sm:block">
               Thread and Matter-over-Thread observability
             </h1>
-            <ConnectionDot connected={apiConnected && connected} loading={loading} />
+            <ConnectionDot connected={apiConnected && connected} loading={loading} liveState={liveState} />
           </div>
           <button
             type="button"

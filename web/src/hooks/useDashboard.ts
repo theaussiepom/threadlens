@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DashboardError, fetchDashboard } from "../api/client";
 import type { DashboardPayload } from "../api/types";
+import { type ConnectionState, liveConnection } from "@/lib/events";
 
 const REFRESH_INTERVAL_MS = 30_000;
+const SSE_DEBOUNCE_MS = 350;
+
+const DASHBOARD_EVENTS = ["dashboard_updated", "dashboard_update", "health_updated"];
 
 export interface DashboardStatus {
   data: DashboardPayload | null;
@@ -13,13 +17,14 @@ export interface DashboardStatus {
   lastUpdated: Date | null;
   /** Whether the latest payload reports the Core API as connected. */
   connected: boolean;
+  /** SSE connection state for the live indicator. */
+  liveState: ConnectionState;
   refresh: () => void;
 }
 
 /**
- * Polls `api/v1/dashboard` every 30s and exposes loading/error/stale state.
- * Keeps the last good payload visible while a refresh is in flight or fails,
- * so transient API blips do not blank the incident console.
+ * Fetches `api/v1/dashboard` and keeps it fresh via debounced SSE refetches,
+ * with 30s polling fallback when the event stream is unavailable.
  */
 export function useDashboard(): DashboardStatus {
   const [data, setData] = useState<DashboardPayload | null>(null);
@@ -27,7 +32,9 @@ export function useDashboard(): DashboardStatus {
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [liveState, setLiveState] = useState<ConnectionState>(liveConnection.getState());
   const abortRef = useRef<AbortController | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     abortRef.current?.abort();
@@ -65,6 +72,37 @@ export function useDashboard(): DashboardStatus {
     };
   }, [load]);
 
+  useEffect(() => {
+    const unsubscribeEvents = liveConnection.subscribeEvents((eventName) => {
+      if (!DASHBOARD_EVENTS.includes(eventName)) return;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => void load(), SSE_DEBOUNCE_MS);
+    });
+    const unsubscribeState = liveConnection.subscribeState(setLiveState);
+    return () => {
+      unsubscribeEvents();
+      unsubscribeState();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [load]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const unsubscribe = liveConnection.subscribeState((state) => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+      if (state === "disconnected") {
+        interval = setInterval(() => void load(), REFRESH_INTERVAL_MS);
+      }
+    });
+    return () => {
+      unsubscribe();
+      if (interval) clearInterval(interval);
+    };
+  }, [load]);
+
   return {
     data,
     error,
@@ -72,6 +110,7 @@ export function useDashboard(): DashboardStatus {
     hasLoaded,
     lastUpdated,
     connected: Boolean(data?.threadlens?.api_connected),
+    liveState,
     refresh: load,
   };
 }

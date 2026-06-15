@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
@@ -56,8 +57,18 @@ def _parse_datetime(value: str) -> datetime:
 class StorageRepository:
     """Async repository for ThreadLens persistence."""
 
-    def __init__(self, database: Database) -> None:
+    def __init__(
+        self,
+        database: Database,
+        *,
+        on_change: Callable[[], None] | None = None,
+    ) -> None:
         self._database = database
+        self._on_change = on_change
+
+    def _notify_change(self) -> None:
+        if self._on_change is not None:
+            self._on_change()
 
     async def initialize(self) -> None:
         await self._database.connect()
@@ -85,6 +96,7 @@ class StorageRepository:
             (str(object_type), object_id, timestamp, payload_json),
         )
         await connection.commit()
+        self._notify_change()
 
     async def get_current_state(
         self,
@@ -175,6 +187,7 @@ class StorageRepository:
             ),
         )
         await connection.commit()
+        self._notify_change()
 
     async def get_events(
         self,
