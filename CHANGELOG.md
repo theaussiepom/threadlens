@@ -2,6 +2,14 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.13] - 2026-06-15
+
+### Changed
+
+- Classification badges no longer wrap on device cards (`Needs attention`, `Recently unstable`, etc.)
+- Clearer read-probe classification reasons: `Last read check failed` instead of `Read probe issue`
+- Device detail restores ping diagnostics and fuller read-probe fields (unsupported paths, duration, notes)
+
 ## [0.2.12] - 2026-06-15
 
 ### Changed

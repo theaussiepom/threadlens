@@ -100,6 +100,15 @@ def test_read_probe_block_exposes_friendly_overview_labels() -> None:
     assert limited_block["overview_label"] == "Read checks unavailable"
     assert "unsupported attribute path" not in (limited_block["summary"] or "").lower()
 
+    failed_block = _build_read_probe_block(
+        _node(
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=False,
+            read_probe_failures_24h=1,
+        )
+    )
+    assert failed_block["overview_label"] == "Last read check failed"
+
 
 def test_node_entry_includes_read_probe_block() -> None:
     node = _node(
@@ -129,7 +138,7 @@ def test_node_entry_exposes_classification_reason_for_read_probe_unstable() -> N
     )
     entry = _node_entry(node, [], otbr_ids=["study", "lounge"])
     assert entry["classification"] == "recently_unstable"
-    assert entry["classification_reason"] == "Read probe issue"
+    assert entry["classification_reason"] == "Last read check failed"
     assert entry["health_reason"] == "Last read check failed"
     assert entry["otbr_ids"] == ["study", "lounge"]
     assert entry["thread_extended_address"] == "3ec12f62981d06e3"
@@ -144,7 +153,7 @@ def test_incident_summary_explains_read_probe_only_unstable() -> None:
         {
             "name": "Living Blind 3",
             "classification": "recently_unstable",
-            "classification_reason": "Read probe issue",
+            "classification_reason": "Last read check failed",
             "recent_unavailable_count": 0,
             "recent_recovered_count": 0,
             "availability_flaps_24h": 0,
@@ -167,7 +176,7 @@ def test_incident_summary_explains_read_probe_only_unstable() -> None:
     )
     assert incident["state"] == "watch"
     assert "safe read probes" in incident["detail"].lower()
-    assert incident["affected_nodes"][0]["reason"] == "Read probe issue"
+    assert incident["affected_nodes"][0]["reason"] == "Last read check failed"
 
 
 def test_matter_section_exposes_health_reasons() -> None:

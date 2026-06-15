@@ -603,6 +603,7 @@ _READ_PROBE_LIMITED_SUMMARY = (
     "skipped on later probes."
 )
 _READ_PROBE_LIMITED_OVERVIEW = "Read checks unavailable"
+_READ_PROBE_FAILED_OVERVIEW = "Last read check failed"
 
 
 def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
@@ -628,15 +629,15 @@ def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
             overview_label = "Read checks OK"
         elif available is True and last_ok is False:
             summary = "Safe read probes failed recently. This does not prove commands are failing."
-            overview_label = "Read probe issue"
+            overview_label = _READ_PROBE_FAILED_OVERVIEW
         elif isinstance(failures_24h, int) and failures_24h >= _READ_PROBE_FAILURES_DEGRADED_24H:
             summary = (
                 "Matter Server reports this node as available, but recent safe read probes "
                 "did not receive a successful response."
             )
-            overview_label = "Read probe issue"
+            overview_label = _READ_PROBE_FAILED_OVERVIEW
         elif last_ok is False:
-            overview_label = "Read probe issue"
+            overview_label = _READ_PROBE_FAILED_OVERVIEW
 
     return {
         "diagnostics_available": diagnostics_available,
@@ -795,7 +796,7 @@ def _node_classification_reason(
         if availability_unstable and not read_probe_issue:
             return "Recent availability changes"
         if read_probe_issue and availability_unstable:
-            return "Recent availability changes and read probe issue"
+            return "Recent availability changes and last read check failed"
         return _node_health_reason(node) or "Recently unstable"
 
     return _node_health_reason(node)
