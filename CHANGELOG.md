@@ -2,6 +2,13 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## Unreleased
+
+### Documentation
+
+- Document that Home Assistant Matter device names are supplied by the HACS integration (`docs/home-assistant-integration.md`)
+- Clarify MQTT Discovery vs HACS name enrichment in `docs/mqtt-home-assistant.md` and troubleshooting
+
 ## [0.2.9] - 2026-06-15
 
 ### Fixed

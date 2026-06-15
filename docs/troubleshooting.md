@@ -136,6 +136,21 @@ ThreadLens reports endpoint mismatch rather than assuming the Thread stack is di
 2. Ensure `/data` volume is writable
 3. `curl http://127.0.0.1:8128/api/v1/health` inside container
 
+## Matter nodes show serials instead of Home Assistant names
+
+**Symptoms:** Dashboard lists nodes as `SCM-MT-2507-0099` while you expect names like `Study Blind`.
+
+**Cause:** ThreadLens Core does not read the Home Assistant device registry. Familiar names are supplied by the [ThreadLens HACS integration](home-assistant-integration.md) via `POST /api/v1/integrations/homeassistant/matter-names`.
+
+**Actions:**
+
+1. Install and configure the [HACS integration](https://github.com/theaussiepom/threadlens-ha-integration) with your Core API URL (Core **0.2.3+**, integration **0.1.19+**).
+2. Reload the ThreadLens integration in Home Assistant, or restart HA, to trigger a name push.
+3. Confirm the Matter device exists in HA and matches the ThreadLens `node_id` or serial — see [HACS matching doc](https://github.com/theaussiepom/threadlens-ha-integration/blob/main/docs/ha-matter-device-names.md).
+4. Inspect a node in `/api/v1/dashboard`: `ha_device_name` should be set when enrichment succeeded.
+
+MQTT Discovery entities alone do not populate `ha_device_name`.
+
 ## Runtime validation checklist
 
 ```bash

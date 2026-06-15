@@ -1,6 +1,13 @@
 # MQTT and Home Assistant
 
-ThreadLens integrates with Home Assistant via **MQTT Discovery**. No custom integration is required for baseline entity exposure.
+ThreadLens integrates with Home Assistant in two ways:
+
+1. **MQTT Discovery** (optional) — health and inventory entities via the MQTT broker. See below.
+2. **HACS integration** — familiar Matter **device names** pushed to Core. See [home-assistant-integration.md](home-assistant-integration.md).
+
+MQTT Discovery does **not** supply `ha_device_name` on Matter nodes. For blind names on the ThreadLens dashboard, install and configure the [ThreadLens HACS integration](https://github.com/theaussiepom/threadlens-ha-integration).
+
+## MQTT Discovery (entities)
 
 ## Prerequisites
 
@@ -129,6 +136,6 @@ curl http://127.0.0.1:8128/api/v1/status | jq .collectors.mqtt
 - Confirm discovery prefix matches your HA setup (default `homeassistant`)
 - See [troubleshooting.md](troubleshooting.md)
 
-## HACS dashboard (future)
+## HACS integration (device names)
 
-A HACS integration for richer dashboards is planned separately. MQTT Discovery remains the baseline v1 integration.
+For Home Assistant blind/device names on the ThreadLens dashboard, use the [ThreadLens HACS integration](home-assistant-integration.md). It pushes names to Core; MQTT Discovery alone does not.

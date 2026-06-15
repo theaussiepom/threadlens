@@ -324,6 +324,11 @@ body {
   margin-bottom: 10px;
 }
 
+.tl-note-top {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
 .tl-status-legend-list {
   margin: 8px 0 0;
   display: grid;

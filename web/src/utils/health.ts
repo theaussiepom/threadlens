@@ -55,13 +55,13 @@ export const NODE_STATUS_LEGEND: StatusLegendEntry[] = [
     key: "needs_attention",
     label: "Needs attention",
     description:
-      "Repeated safe read probe failures in the last 24 hours (three or more). Availability may still look OK.",
+      "Three or more read check failures in the last 24 hours. The node may still show as available in Matter Server.",
   },
   {
     key: "recently_unstable",
     label: "Recently unstable",
     description:
-      "At least one availability change or read probe failure in the last 24 hours. “Recently” means within the current 24-hour event window.",
+      "A recent availability change, or the last read check failed, or one read check failure in the last 24 hours.",
   },
   {
     key: "diagnostics_limited",
@@ -83,7 +83,7 @@ export const NODE_STATUS_LEGEND: StatusLegendEntry[] = [
 ];
 
 export const RECENT_WINDOW_DESCRIPTION =
-  "“Recently” and all 24h counters use the last 24 hours of ThreadLens events (up to 100 events per node).";
+  "“Recently” and all 24h counters use the last 24 hours of ThreadLens events (up to 100 events per node). Read checks are read-only Matter attribute reads — they do not move blinds or change device state.";
 
 export interface IncidentMeta {
   label: string;

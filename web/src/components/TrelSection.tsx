@@ -43,9 +43,6 @@ export function MdnsTrelSection({ mdns, trel }: { mdns: MdnsSection; trel: TrelS
         </div>
       )}
 
-      <p className="tl-muted tl-note">
-        TREL/mDNS visibility is observation only and does not imply device parentage.
-      </p>
     </Card>
   );
 }

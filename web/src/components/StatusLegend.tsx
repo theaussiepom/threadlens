@@ -3,7 +3,7 @@ import { Collapsible } from "./primitives";
 
 export function StatusLegend() {
   return (
-    <Collapsible summary="What do these statuses mean?" className="tl-status-legend">
+    <Collapsible summary="What do these statuses mean?" className="tl-status-legend" defaultOpen>
       <p className="tl-muted tl-note">{RECENT_WINDOW_DESCRIPTION}</p>
       <dl className="tl-status-legend-list">
         {NODE_STATUS_LEGEND.map((entry) => (

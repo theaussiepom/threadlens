@@ -30,6 +30,7 @@ No authentication in v1. Trusted LAN only.
 | GET | `/matter-nodes` | Matter node current state |
 | GET | `/mdns/services` | Observed mDNS services |
 | GET | `/trel/services` | Observed TREL services |
+| POST | `/integrations/homeassistant/matter-names` | Apply Home Assistant Matter device names (see [Home Assistant integration](home-assistant-integration.md)) |
 
 ## Agent endpoints (port 8129)
 
@@ -63,9 +64,11 @@ curl http://localhost:8128/api/v1/report.yaml
 
 ## Dashboard endpoint
 
-`GET /api/v1/dashboard` returns a read-only, bounded JSON payload intended for the future Core-served dashboard UI. It aggregates health, OTBR, Matter, mDNS, TREL, MQTT status, recent events, and report links from Core storage — without Home Assistant device/entity registry enrichment.
+`GET /api/v1/dashboard` returns a read-only, bounded JSON payload for the Core dashboard UI. It aggregates health, OTBR, Matter, mDNS, TREL, MQTT status, recent events, and report links from Core storage.
 
-During the migration period, the HACS integration may still serve its own dashboard panel; this endpoint is the canonical Core-side data source.
+**Home Assistant device names** (`ha_device_name`) are not read from HA by Core. They are supplied by the [ThreadLens HACS integration](home-assistant-integration.md) via `POST /api/v1/integrations/homeassistant/matter-names`. Without that push, Matter node labels use Matter Server observations (often serials).
+
+During migration, the HACS integration may also serve its own companion panel; this endpoint is the canonical Core-side data source.
 
 ## Dashboard UI (React, served by Core)
 
@@ -92,6 +95,7 @@ The HACS integration dashboard remains the current production UI for Home Assist
 
 ## Related docs
 
+- [Home Assistant integration (device names)](home-assistant-integration.md)
 - [Reports](reports.md)
 - [Configuration](configuration.md)
 - [Security](security.md)
