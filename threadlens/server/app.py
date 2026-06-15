@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import asyncio
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 
@@ -15,6 +17,7 @@ from threadlens.collectors.mdns import MdnsObserver
 from threadlens.collectors.otbr_rest import OtbrCollector
 from threadlens.config import RuntimeMode, ThreadLensConfig
 from threadlens.mqtt import MqttPublisher
+from threadlens.server.events import DashboardBroadcaster, storage_change_listener
 from threadlens.server.routes import create_router
 from threadlens.server.static import api_landing_page, mount_static_ui
 from threadlens.storage.db import Database
@@ -24,8 +27,12 @@ from threadlens.storage.repositories import StorageRepository
 def create_server_app(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        broadcaster = DashboardBroadcaster()
+        broadcaster.set_loop(asyncio.get_running_loop())
+        app.state.broadcaster = broadcaster
+
         database = Database(config.storage.sqlite_path)
-        repository = StorageRepository(database)
+        repository = StorageRepository(database, on_change=storage_change_listener(broadcaster))
         observer: MdnsObserver | None = None
         otbr_collector: OtbrCollector | None = None
         matter_collector: MatterCollector | None = None
@@ -88,6 +95,7 @@ def create_server_app(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> 
                 await observer.stop()
                 app.state.mdns_observer = None
             app.state.storage_ready = False
+            app.state.broadcaster = None
             await database.close()
 
     app = FastAPI(
@@ -114,6 +122,7 @@ def create_server_app(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> 
     app.state.mqtt_publisher = None
     app.state.report_last_generated_at = None
     app.state.report_last_window = None
+    app.state.broadcaster = None
 
     app.include_router(create_router(config, active_mode=active_mode), prefix="/api/v1")
 

@@ -111,9 +111,24 @@ def test_source_uses_router_pages_not_single_scroll_layout() -> None:
     assert "BrowserRouter" in app
     assert "AppShell" in app
     assert "OverviewPage" in app
+    assert "HowItWorksPage" in app
     assert "InfrastructurePage" in app
     assert "ReportsPage" in app
     assert "InfraColumnLayout" not in app
+
+
+def test_source_has_sse_live_updates() -> None:
+    src = _source_text(".ts", ".tsx")
+    assert "api/v1/events/stream" in src
+    assert "EventSource" in src
+    assert "liveConnection" in src
+
+
+def test_how_it_works_page_explains_read_only_scope() -> None:
+    page = (WEB_SRC / "pages" / "HowItWorksPage.tsx").read_text(encoding="utf-8")
+    assert "How it works" in page
+    assert "Read-only guarantee" in page
+    assert "NODE_STATUS_LEGEND" in page
 
 
 def test_reports_page_uses_keyvalue_and_relative_links() -> None:

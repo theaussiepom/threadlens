@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+from collections.abc import AsyncIterator
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
 
 from threadlens import __version__
 from threadlens.collectors.agent_client import AgentCollector
@@ -31,6 +35,7 @@ from threadlens.report.generator import ReportContext
 from threadlens.report.serialize import report_to_dict, report_to_yaml
 from threadlens.report.window import SUPPORTED_WINDOWS
 from threadlens.server.dashboard_context import build_dashboard_response
+from threadlens.server.events import DashboardBroadcaster
 from threadlens.server.summary import (
     build_capabilities_payload,
     build_events_payload,
@@ -452,5 +457,28 @@ def create_router(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> APIR
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @router.get("/events/stream")
+    async def events_stream(request: Request) -> EventSourceResponse:
+        broadcaster: DashboardBroadcaster | None = getattr(request.app.state, "broadcaster", None)
+        if broadcaster is None:
+            raise HTTPException(status_code=503, detail="Event stream not ready")
+
+        async def generator() -> AsyncIterator[dict[str, Any]]:
+            yield {
+                "event": "message",
+                "data": json.dumps({"type": "heartbeat"}),
+            }
+            yield {
+                "event": "dashboard_update",
+                "data": json.dumps({"type": "dashboard_update"}),
+            }
+            async for item in broadcaster.subscribe():
+                yield {
+                    "event": item["event"],
+                    "data": json.dumps(item["data"]),
+                }
+
+        return EventSourceResponse(generator())
 
     return router

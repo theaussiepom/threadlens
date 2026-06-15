@@ -236,6 +236,8 @@ Published image: `ghcr.io/theaussiepom/threadlens:0.1.2`
 
 - [Configuration](docs/configuration.md)
 - [Docker](docs/docker.md)
+- [Style guide (ZigbeeLens sibling UI)](docs/style-guide.md)
+- [HACS embedded view (HTTPS / Traefik)](docs/hacs-embedded-view.md)
 - [Home Assistant integration (device names)](docs/home-assistant-integration.md)
 - [MQTT / Home Assistant](docs/mqtt-home-assistant.md)
 - [Troubleshooting](docs/troubleshooting.md)
