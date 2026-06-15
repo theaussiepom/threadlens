@@ -484,8 +484,9 @@ async def test_standard_mode_blind_failure_falls_back_to_generic_with_note(tmp_p
     assert state.last_read_probe_ok is True
     assert state.last_read_probe_limited is True
     assert state.last_read_probe_attribute_path == "0/40/5"
-    assert "device-specific read check did not complete" in (state.last_read_probe_note or "").lower()
-    assert "command failed" not in (state.last_read_probe_note or "").lower()
+    note = (state.last_read_probe_note or "").lower()
+    assert "device-specific read check did not complete" in note
+    assert "command failed" not in note
 
 
 def test_matter_node_probe_field_defaults() -> None:
