@@ -324,8 +324,7 @@ export function HowItWorksPage() {
           <p className="text-sm leading-relaxed text-zl-muted">
             This dashboard prefers a Server-Sent Events (SSE) stream from Core for near-real-time
             refresh. When SSE is unavailable — for example behind a reverse proxy that buffers event
-            streams — the UI falls back to 30-second polling. Use the header refresh button for an
-            immediate manual update.
+            streams — the UI falls back to 30-second polling.
           </p>
         </Card>
       </section>

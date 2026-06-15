@@ -5,12 +5,13 @@ import { fmtTimeShort } from "@/utils/format";
 
 const nav = [
   { to: "/", label: "Overview", end: true },
-  { to: "/devices", label: "Devices" },
+  { to: "/how-it-works", label: "How it works" },
   { to: "/infrastructure", label: "Infrastructure" },
+  { to: "/devices", label: "Devices" },
   { to: "/timeline", label: "Timeline" },
   { to: "/reports", label: "Reports" },
-  { to: "/how-it-works", label: "How it works" },
   { to: "/diagnostics", label: "Diagnostics" },
+  { to: "/settings", label: "Settings" },
 ];
 
 function navClass(isActive: boolean): string {
@@ -83,7 +84,7 @@ function ModeBanner({ connected, mqttConnected }: { connected: boolean; mqttConn
 }
 
 export function AppShell() {
-  const { data, connected, loading, liveState, lastUpdated, refresh } = useDashboardContext();
+  const { data, connected, loading, liveState, lastUpdated } = useDashboardContext();
   const version = data?.threadlens?.version ?? "—";
   const apiConnected = Boolean(data?.threadlens?.api_connected);
   const mqttConnected = data?.mqtt?.connected ?? null;
@@ -117,7 +118,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zl-border bg-zl-surface/80 px-4 py-3 backdrop-blur sm:px-6">
+        <header className="flex flex-wrap items-center gap-3 border-b border-zl-border bg-zl-surface/80 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <span className="font-semibold tracking-tight lg:hidden">ThreadLens</span>
             <h1 className="hidden text-sm font-medium text-zl-muted sm:block">
@@ -125,14 +126,6 @@ export function AppShell() {
             </h1>
             <ConnectionDot connected={apiConnected && connected} loading={loading} liveState={liveState} />
           </div>
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            disabled={loading}
-            className="min-h-11 rounded-lg border border-zl-border bg-zl-bg px-4 py-2 text-sm text-zl-text hover:bg-zl-surface-2 disabled:opacity-60"
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
         </header>
 
         <nav
