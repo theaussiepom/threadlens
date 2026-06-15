@@ -2,6 +2,13 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.11] - 2026-06-15
+
+### Changed
+
+- Core dashboard refactored to ZigbeeLens-style sibling UI: Tailwind v4 dark `zl-*` theme, sidebar + React Router pages (Overview, Devices, Infrastructure, Timeline, Reports, Diagnostics), and routed device detail views
+- IBM Plex fonts bundled in the dashboard build (no external font URLs in production assets)
+
 ## [0.2.10] - 2026-06-15
 
 ### Added

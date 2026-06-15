@@ -1,5 +1,7 @@
+import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 // ThreadLens Core serves the built dashboard from its static directory.
 //
@@ -9,7 +11,12 @@ import react from "@vitejs/plugin-react";
 // `THREADLENS_STATIC_DIR`.
 export default defineConfig({
   base: "./",
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   build: {
     outDir: "../static",
     emptyOutDir: true,
