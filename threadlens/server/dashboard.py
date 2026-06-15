@@ -22,10 +22,17 @@ REASON_LABELS: dict[str, str] = {
     "otbr_thread_stack_disabled": "OTBR Thread stack disabled",
     "otbr_unreachable": "OTBR REST API unreachable",
     "matter_server_disconnected": "Matter server disconnected",
+    "matter_server_not_observed": "Matter server not observed",
+    "matter_node_inventory_unavailable": "Matter node inventory unavailable",
+    "matter_nodes_unavailable": "One or more Matter nodes unavailable",
     "matter_node_unavailable": "Matter node unavailable",
+    "matter_node_unavailable_critical": "Matter node unavailable for an extended period",
+    "matter_node_availability_unknown": "Matter node availability unknown",
+    "matter_node_availability_flapping_warning": "Matter node availability churn (24h)",
+    "matter_node_availability_flapping_degraded": "Repeated Matter node availability changes (24h)",
     "matter_node_read_probe_failed": "Safe read probe failed recently",
     "matter_node_read_probe_failures_24h": "Repeated safe read probe failures (24h)",
-    "matter_node_read_probe_diagnostics_limited": "Read diagnostics limited",
+    "matter_node_read_probe_diagnostics_limited": "No working read check path found",
     "matter_node_ping_probe_failed": "Ping probe failed recently",
     "primary_thread_network_unknown": "Primary Thread network unknown",
     "configured_otbrs_disagree_on_ext_pan_id": "Configured OTBRs disagree on network",
@@ -318,6 +325,31 @@ def _network_entry(raw: dict[str, Any], health_by_pan: dict[str, dict[str, Any]]
     }
 
 
+def _dedupe_reason_codes(codes: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for code in codes:
+        if code in seen:
+            continue
+        seen.add(code)
+        ordered.append(code)
+    return ordered
+
+
+def _matter_health_reasons(
+    health: dict[str, Any] | None,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    codes: list[str] = []
+    if isinstance(health, dict):
+        for entry in health.get("matter_servers", []) or []:
+            codes.extend(_reasons(entry))
+        for entry in health.get("matter_nodes", []) or []:
+            codes.extend(_reasons(entry))
+    deduped = _dedupe_reason_codes(codes)
+    prominent_codes = [code for code in deduped if code not in _INFO_REASON_CODES]
+    return friendly_reasons(prominent_codes), friendly_reasons(deduped)
+
+
 def _matter_section(
     matter_servers: list[dict[str, Any]],
     matter_nodes: list[dict[str, Any]],
@@ -370,8 +402,12 @@ def _matter_section(
         for entry in health.get("matter_nodes", []) or []:
             health_states.append(_state(entry))
 
+    matter_reasons, matter_reasons_all = _matter_health_reasons(health)
+
     return {
         "health": _rollup(health_states) if health_states else "unknown",
+        "reasons": matter_reasons,
+        "reasons_all": matter_reasons_all,
         "servers": servers_total,
         "servers_connected": servers_connected,
         "node_count": len(matter_nodes),
@@ -561,6 +597,12 @@ def compute_node_availability_metrics(
 
 _READ_PROBE_FAILURES_WARNING_24H = 1
 _READ_PROBE_FAILURES_DEGRADED_24H = 3
+_READ_PROBE_LIMITED_SUMMARY = (
+    "ThreadLens tried several read-only Matter attributes but could not find one this device "
+    "accepts. Identical devices can use different Matter endpoints; unsupported paths are "
+    "skipped on later probes."
+)
+_READ_PROBE_LIMITED_OVERVIEW = "Read checks unavailable"
 
 
 def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
@@ -577,8 +619,8 @@ def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
     overview_label: str | None = None
     if diagnostics_available:
         if limited:
-            summary = "Read diagnostics are limited for this node (unsupported attribute path)."
-            overview_label = "Read diagnostics limited"
+            summary = note or _READ_PROBE_LIMITED_SUMMARY
+            overview_label = _READ_PROBE_LIMITED_OVERVIEW
         elif last_ok is True:
             overview_label = "Read checks OK"
         elif available is True and last_ok is False:
@@ -608,6 +650,8 @@ def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
         "successes_24h": successes_24h,
         "summary": summary,
         "note": note,
+        "successful_path": node.get("last_successful_probe_path"),
+        "unsupported_paths": node.get("last_unsupported_probe_paths") or [],
     }
 
 
@@ -725,7 +769,8 @@ def _node_classification_reason(
         return _node_health_reason(node) or REASON_LABELS["matter_node_unavailable"]
     if classification == "diagnostics_limited":
         return (
-            read_probe.get("overview_label")
+            read_probe.get("summary")
+            or read_probe.get("overview_label")
             or REASON_LABELS["matter_node_read_probe_diagnostics_limited"]
         )
     if classification == "needs_attention":
@@ -1072,6 +1117,8 @@ def build_node_detail(
     node_events = _events_for_subject(events, subject_id)
     this_unstable = node.get("recent_unavailable_count", 0) or node.get("recent_recovered_count", 0)
     read_probe_issue = _read_probe_issue_signals(node.get("read_probe") or {})
+    read_probe_limited = bool((node.get("read_probe") or {}).get("limited"))
+    classification = node.get("classification")
 
     other_unstable = [
         n
@@ -1085,7 +1132,10 @@ def build_node_detail(
         if isinstance(e.get("event_type"), str) and e["event_type"] in _INFRA_DEGRADED_EVENTS
     ]
 
-    if read_probe_issue and not this_unstable and not node_events:
+    if read_probe_limited or classification == "diagnostics_limited":
+        assessment_kind = "individual"
+        assessment = (node.get("read_probe") or {}).get("summary") or _READ_PROBE_LIMITED_SUMMARY
+    elif read_probe_issue and not this_unstable and not node_events:
         assessment_kind = "individual"
         assessment = (
             "Matter Server reports this node as available, but the most recent safe read probe "

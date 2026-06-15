@@ -9,7 +9,6 @@ const DEFAULT_FOREIGN_MESSAGE =
 export function MdnsTrelSection({ mdns, trel }: { mdns: MdnsSection; trel: TrelSectionData }) {
   const foreignMessage = trel.info?.message || DEFAULT_FOREIGN_MESSAGE;
   const showForeignInfo = Boolean(trel.foreign_service_count) && trel.informational;
-  const rawDiffersFromDisplay = trel.health_raw && trel.health_raw !== trel.health;
 
   return (
     <Card title="mDNS / TREL">
@@ -22,9 +21,6 @@ export function MdnsTrelSection({ mdns, trel }: { mdns: MdnsSection; trel: TrelS
             value: boolText(mdns.observation_degraded, "Yes", "No"),
           },
           { label: "TREL health", value: <HealthBadge state={trel.health} /> },
-          ...(rawDiffersFromDisplay
-            ? [{ label: "TREL raw health", value: <HealthBadge state={trel.health_raw} /> }]
-            : []),
           { label: "TREL services", value: trel.service_count || 0 },
           { label: "Foreign TREL", value: trel.foreign_service_count || 0 },
         ]}

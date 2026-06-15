@@ -29,7 +29,8 @@ def test_conservative_mode_uses_generic_candidates_only() -> None:
     )
     kinds = [candidate.kind for candidate in candidates]
     assert "window_covering_status" not in kinds
-    assert candidates[0].label == "Basic read check"
+    assert candidates[0].kind == "discovered"
+    assert candidates[0].attribute_path == "0/40/2"
     assert "0/40/2" in [candidate.attribute_path for candidate in candidates]
 
 
@@ -145,6 +146,48 @@ def test_legacy_top_level_fields_are_rejected() -> None:
                 "attributes": {"fallback": ["0/40/5"]},
             }
         )
+
+
+def test_discovered_candidates_use_node_attribute_keys() -> None:
+    config = MatterProbeConfig(mode=ProbeMode.CONSERVATIVE)
+    keys = frozenset({"2/258/10", "2/258/0", "0/40/2", "0/40/5"})
+    candidates = MatterProbePlanner().plan(
+        _node(),
+        attribute_keys=keys,
+        config=config,
+    )
+    paths = [candidate.attribute_path for candidate in candidates]
+    assert "0/40/2" in paths
+    assert "2/258/10" in paths
+    assert paths.index("0/40/2") < paths.index("2/258/10")
+
+
+def test_discovered_candidates_skip_unsupported_paths() -> None:
+    config = MatterProbeConfig(mode=ProbeMode.STANDARD)
+    candidates = MatterProbePlanner().plan(
+        _node(last_unsupported_probe_paths=["2/258/10"]),
+        attribute_keys=frozenset({"2/258/10", "2/258/0", "0/40/2"}),
+        config=config,
+    )
+    paths = [candidate.attribute_path for candidate in candidates]
+    assert "2/258/10" not in paths
+    assert "2/258/0" in paths
+
+
+def test_discovered_candidates_support_non_covering_devices() -> None:
+    config = MatterProbeConfig(mode=ProbeMode.CONSERVATIVE)
+    keys = frozenset({"0/40/2", "0/40/5", "0/6/0"})
+    candidates = MatterProbePlanner().plan(
+        _node(product="Kitchen Light"),
+        attribute_keys=keys,
+        config=config,
+    )
+    kinds = [candidate.kind for candidate in candidates]
+    paths = [candidate.attribute_path for candidate in candidates]
+    assert "window_covering_status" not in kinds
+    assert "0/40/2" in paths
+    assert candidates[0].kind == "discovered"
+    assert candidates[0].label == "Device info read check"
 
 
 def test_infer_device_types_from_cluster_keys() -> None:

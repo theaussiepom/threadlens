@@ -37,6 +37,54 @@ export function nodeClassMeta(classification: NodeClassification): ClassMeta {
   return NODE_CLASS_META[classification] ?? NODE_CLASS_META.unknown;
 }
 
+export interface StatusLegendEntry {
+  key: string;
+  label: string;
+  description: string;
+}
+
+/** Human-readable definitions for Matter node list badges and groups. */
+export const NODE_STATUS_LEGEND: StatusLegendEntry[] = [
+  {
+    key: "unavailable",
+    label: "Needs attention (unavailable)",
+    description:
+      "Matter Server reports this node as unavailable right now. Commands may not reach the device.",
+  },
+  {
+    key: "needs_attention",
+    label: "Needs attention",
+    description:
+      "Repeated safe read probe failures in the last 24 hours (three or more). Availability may still look OK.",
+  },
+  {
+    key: "recently_unstable",
+    label: "Recently unstable",
+    description:
+      "At least one availability change or read probe failure in the last 24 hours. “Recently” means within the current 24-hour event window.",
+  },
+  {
+    key: "diagnostics_limited",
+    label: "Diagnostics limited",
+    description:
+      "ThreadLens could not find a read-only Matter attribute this device accepts. This does not mean the device is broken — identical devices can use different Matter endpoints.",
+  },
+  {
+    key: "healthy",
+    label: "Healthy",
+    description:
+      "Available with no recent availability churn or read probe failures in the last 24 hours.",
+  },
+  {
+    key: "unknown",
+    label: "Unknown",
+    description: "Not enough observation data yet to classify this node.",
+  },
+];
+
+export const RECENT_WINDOW_DESCRIPTION =
+  "“Recently” and all 24h counters use the last 24 hours of ThreadLens events (up to 100 events per node).";
+
 export interface IncidentMeta {
   label: string;
   tone: Tone;

@@ -34,6 +34,8 @@ export function NetworksSection({ networks }: { networks: ThreadNetwork[] }) {
 }
 
 export function MatterServerSection({ matter }: { matter: MatterSection }) {
+  const reasons = matter.reasons ?? [];
+
   return (
     <Card title={<>Matter servers <HealthBadge state={matter.health} /></>}>
       <KeyValue
@@ -50,6 +52,16 @@ export function MatterServerSection({ matter }: { matter: MatterSection }) {
           },
         ]}
       />
+
+      {reasons.length > 0 && (
+        <div className="tl-chip-row tl-chip-row-spaced">
+          {reasons.map((reason) => (
+            <span className="tl-chip tl-chip-alert" key={reason.code} title={reason.label}>
+              {reason.label}
+            </span>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

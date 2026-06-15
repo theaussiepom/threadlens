@@ -77,10 +77,11 @@ def test_read_probe_block_exposes_friendly_overview_labels() -> None:
         _node(
             read_probe_diagnostics_available=True,
             last_read_probe_limited=True,
-            last_probe_label="Blind status read check",
+            last_probe_label="Window covering read check",
         )
     )
-    assert limited_block["overview_label"] == "Read diagnostics limited"
+    assert limited_block["overview_label"] == "Read checks unavailable"
+    assert "unsupported attribute path" not in (limited_block["summary"] or "").lower()
 
 
 def test_node_entry_includes_read_probe_block() -> None:
@@ -150,6 +151,53 @@ def test_incident_summary_explains_read_probe_only_unstable() -> None:
     assert incident["state"] == "watch"
     assert "safe read probes" in incident["detail"].lower()
     assert incident["affected_nodes"][0]["reason"] == "Read probe issue"
+
+
+def test_matter_section_exposes_health_reasons() -> None:
+    from threadlens.server.dashboard import build_dashboard_payload
+
+    payload = build_dashboard_payload(
+        connected=True,
+        health={
+            "overall": {"state": "warning", "reasons": ["matter_nodes_unavailable"]},
+            "matter_servers": [
+                {"id": "m1", "state": "warning", "reasons": ["matter_nodes_unavailable"]},
+            ],
+            "matter_nodes": [
+                {
+                    "node_id": 1,
+                    "state": "degraded",
+                    "reasons": ["matter_node_unavailable"],
+                }
+            ],
+        },
+        matter_servers=[{"id": "m1", "connected": True}],
+        matter_nodes=[{"node_id": 1, "server_id": "m1", "available": False}],
+    )
+    reasons = payload["matter"]["reasons"]
+    assert any(r["code"] == "matter_nodes_unavailable" for r in reasons)
+    assert any(r["code"] == "matter_node_unavailable" for r in payload["matter"]["reasons_all"])
+
+
+def test_build_node_detail_for_diagnostics_limited() -> None:
+    from threadlens.server.dashboard import build_node_detail
+
+    node = {
+        "subject_id": "matter_node:study:24",
+        "classification": "diagnostics_limited",
+        "recent_unavailable_count": 0,
+        "recent_recovered_count": 0,
+        "read_probe": {
+            "limited": True,
+            "summary": (
+                "ThreadLens tried several read-only Matter attributes but could not find "
+                "one this device accepts."
+            ),
+        },
+    }
+    detail = build_node_detail(node=node, all_nodes=[node], events=[])
+    assert detail["assessment_kind"] == "individual"
+    assert "read-only Matter attributes" in detail["assessment"]
 
 
 def test_read_probe_summary_uses_careful_wording() -> None:

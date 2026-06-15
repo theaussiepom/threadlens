@@ -28,6 +28,8 @@ function assess(node: MatterNode, data: DashboardPayload): Assessment {
     Boolean(node.read_probe?.diagnostics_available) &&
     !node.read_probe?.limited &&
     node.read_probe?.last_ok === false;
+  const readProbeLimited =
+    Boolean(node.read_probe?.limited) || node.classification === "diagnostics_limited";
   const nodeEvents = events.filter((e) => e.subject_id === node.subject_id);
   const otherUnstable = nodes.filter(
     (n) =>
@@ -38,6 +40,15 @@ function assess(node: MatterNode, data: DashboardPayload): Assessment {
     (e) => typeof e.event_type === "string" && INFRA_DEGRADED_EVENTS.has(e.event_type)
   );
 
+  if (readProbeLimited) {
+    return {
+      kind: "individual",
+      text:
+        node.classification_reason ||
+        node.read_probe?.summary ||
+        "ThreadLens could not find a read-only Matter attribute this device accepts. Identical devices can use different Matter endpoints.",
+    };
+  }
   if (readProbeIssue && !thisUnstable) {
     return {
       kind: "individual",
@@ -206,6 +217,18 @@ export function NodeDrilldown({
                     label: "Probe path",
                     value: orDash(node.read_probe.attribute_path),
                   },
+                  {
+                    label: "Working path",
+                    value: orDash(node.read_probe.successful_path),
+                  },
+                  ...(node.read_probe.unsupported_paths?.length
+                    ? [
+                        {
+                          label: "Unsupported paths",
+                          value: node.read_probe.unsupported_paths.join(", "),
+                        },
+                      ]
+                    : []),
                   {
                     label: "Duration",
                     value:
