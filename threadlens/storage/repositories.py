@@ -23,6 +23,7 @@ class CurrentStateType(StrEnum):
     TREL_SERVICE = "trel_service"
     MATTER_SERVER = "matter_server"
     MATTER_NODE = "matter_node"
+    THREAD_DEVICE = "thread_device"
     AGENT = "agent"
     CAPABILITIES = "capabilities"
 

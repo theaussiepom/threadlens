@@ -13,6 +13,7 @@ import pytest
 from threadlens.collectors.otbr_parse import (
     merge_snapshots,
     parse_legacy_node_response,
+    parse_otbr_device_inventory,
     parse_otbr_devices_response,
     parse_otbr_node_response,
     reconcile_otbr_snapshots,
@@ -423,3 +424,25 @@ async def test_collector_reconciles_stale_json_api_with_legacy_node(tmp_path: Pa
     assert study.capabilities.thread_stack_active is True
 
     await database.close()
+
+
+def test_parse_otbr_device_inventory_extracts_thread_devices() -> None:
+    payload = {
+        "data": [
+            {
+                "id": "3ec12f62981d06e3",
+                "type": "threadDevice",
+                "attributes": {
+                    "extAddress": "3ec12f62981d06e3",
+                    "omrIpv6Address": "fd22:c1b2:8661:1:a87b:2dbb:e992:5426",
+                    "role": "child",
+                    "hostName": "",
+                },
+            }
+        ]
+    }
+    inventory = parse_otbr_device_inventory(payload)
+    assert len(inventory) == 1
+    assert inventory[0].extended_address == "3ec12f62981d06e3"
+    assert inventory[0].ipv6_address == "fd22:c1b2:8661:1:a87b:2dbb:e992:5426"
+    assert inventory[0].role == "child"

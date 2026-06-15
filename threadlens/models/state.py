@@ -171,3 +171,19 @@ class MatterNodeState(BaseModel):
     last_read_probe_note: str | None = None
     ha_device_name: str | None = None
     ha_entity_id: str | None = None
+    thread_ipv6_address: str | None = None
+    thread_extended_address: str | None = None
+    thread_identity_last_at: datetime | None = None
+
+
+class ThreadDeviceState(BaseModel):
+    id: str
+    extended_address: str
+    ipv6_address: str | None = None
+    rloc_address: str | None = None
+    role: str | None = None
+    device_type: str | None = None
+    hostname: str | None = None
+    source_otbr_id: str
+    ext_pan_id: str | None = None
+    last_seen: datetime | None = None

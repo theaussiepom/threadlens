@@ -103,6 +103,8 @@ class OtbrPollingConfig(BaseModel):
     request_timeout_seconds: float = Field(default=5.0, gt=0)
     allow_read_only_actions: bool = False
     use_legacy_node_fallback: bool = True
+    device_collection_interval_seconds: int = Field(default=900, ge=60)
+    device_collection_timeout_seconds: int = Field(default=90, ge=10)
 
 
 class MatterProbeAttributesConfig(BaseModel):

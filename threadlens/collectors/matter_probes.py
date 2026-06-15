@@ -21,6 +21,7 @@ from threadlens.collectors.matter_ws import MatterCommandResult
 from threadlens.config import MatterProbeConfig, ProbeMode
 from threadlens.models.events import EventSeverity
 from threadlens.models.state import MatterNodeState
+from threadlens.utils.network import extract_ping_ipv6
 from threadlens.utils.time import utc_now
 
 READ_PROBE_SUCCEEDED = "matter_node.read_probe.succeeded"
@@ -265,10 +266,19 @@ class MatterProbeRunner:
 
         ping_attempted = False
         ping_ok: bool | None = None
-        should_ping = include_ping if include_ping is not None else self._config.ping_enabled
-        if should_ping:
+        should_capture_identity = self._config.probes_active
+        should_ping_diagnostics = (
+            include_ping if include_ping is not None else self._config.ping_enabled
+        )
+        if should_capture_identity or should_ping_diagnostics:
             ping_attempted = True
-            ping_ok = await self._run_ping(node=final, timeout=timeout)
+            ping_ok, final = await self._run_ping(
+                node=final,
+                timeout=timeout,
+                update_ping_diagnostics=should_ping_diagnostics,
+                capture_thread_identity=should_capture_identity,
+            )
+            await self._persist_node(final)
 
         return MatterProbeRunResult(
             node_id=node_id,
@@ -477,13 +487,21 @@ class MatterProbeRunner:
             command_result=command_result,
         )
 
-    async def _run_ping(self, *, node: MatterNodeState, timeout: float) -> bool:
+    async def _run_ping(
+        self,
+        *,
+        node: MatterNodeState,
+        timeout: float,
+        update_ping_diagnostics: bool,
+        capture_thread_identity: bool,
+    ) -> tuple[bool | None, MatterNodeState]:
         now = utc_now()
         command_result = await self._request_command(
             "ping_node",
             {"node_id": node.node_id},
             timeout=timeout,
         )
+        ipv6 = extract_ping_ipv6(command_result.result)
 
         if command_result.timed_out:
             event_type = PING_TIMED_OUT
@@ -501,44 +519,56 @@ class MatterProbeRunner:
             severity = EventSeverity.WARNING
             ok = False
 
-        since = now - timedelta(hours=24)
-        failures_24h = await self._count_events(
-            node_id=node.node_id,
-            event_types=PING_FAILURE_EVENT_TYPES,
-            since=since,
-        )
-        successes_24h = await self._count_events(
-            node_id=node.node_id,
-            event_types=PING_SUCCESS_EVENT_TYPES,
-            since=since,
-        )
-        if not ok:
-            failures_24h += 1
-        else:
-            successes_24h += 1
+        updates: dict[str, Any] = {}
+        if capture_thread_identity:
+            updates.update(
+                {
+                    "thread_ipv6_address": ipv6,
+                    "thread_identity_last_at": now if ipv6 else node.thread_identity_last_at,
+                }
+            )
 
-        updated = node.model_copy(
-            update={
-                "ping_diagnostics_available": True,
-                "last_ping_at": now,
-                "last_ping_ok": ok,
-                "ping_failures_24h": failures_24h,
-                "ping_successes_24h": successes_24h,
-            }
-        )
-        await self._persist_node(updated)
+        if update_ping_diagnostics:
+            since = now - timedelta(hours=24)
+            failures_24h = await self._count_events(
+                node_id=node.node_id,
+                event_types=PING_FAILURE_EVENT_TYPES,
+                since=since,
+            )
+            successes_24h = await self._count_events(
+                node_id=node.node_id,
+                event_types=PING_SUCCESS_EVENT_TYPES,
+                since=since,
+            )
+            if not ok:
+                failures_24h += 1
+            else:
+                successes_24h += 1
+            updates.update(
+                {
+                    "ping_diagnostics_available": True,
+                    "last_ping_at": now,
+                    "last_ping_ok": ok,
+                    "ping_failures_24h": failures_24h,
+                    "ping_successes_24h": successes_24h,
+                }
+            )
+            await self._emit_event(
+                node_id=node.node_id,
+                event_type=event_type,
+                message=message,
+                severity=severity,
+                data={
+                    "node_id": node.node_id,
+                    "probe_type": "ping_node",
+                    "duration_ms": command_result.duration_ms,
+                    "error_code": command_result.error_code,
+                    "error_summary": _error_summary(command_result),
+                    "thread_ipv6_address": ipv6,
+                },
+            )
 
-        await self._emit_event(
-            node_id=node.node_id,
-            event_type=event_type,
-            message=message,
-            severity=severity,
-            data={
-                "node_id": node.node_id,
-                "probe_type": "ping_node",
-                "duration_ms": command_result.duration_ms,
-                "error_code": command_result.error_code,
-                "error_summary": _error_summary(command_result),
-            },
-        )
-        return ok
+        updated = node.model_copy(update=updates) if updates else node
+        if update_ping_diagnostics:
+            await self._persist_node(updated)
+        return ok, updated

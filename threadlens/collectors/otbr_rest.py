@@ -13,19 +13,23 @@ import httpx
 from threadlens.collectors.otbr_parse import (
     OtbrReconciliationResult,
     ParsedOtbrSnapshot,
+    ParsedThreadDevice,
     merge_snapshots,
     parse_legacy_node_response,
+    parse_otbr_device_inventory,
     parse_otbr_devices_response,
     parse_otbr_node_response,
     reconcile_otbr_snapshots,
     thread_stack_active,
 )
 from threadlens.config import OtbrConfig, ThreadLensConfig
+from threadlens.enrichment.thread_matter import apply_thread_identity_correlation
 from threadlens.models.capabilities import OtbrInternalTrelCapabilities, OtbrRestCapabilities
 from threadlens.models.events import Event, EventSeverity, EventSourceType, EventSubjectType
 from threadlens.models.health import HealthState, HealthStatus
 from threadlens.models.state import (
     OtbrState,
+    ThreadDeviceState,
     ThreadNetworkClassification,
     ThreadNetworkState,
     TrelServiceState,
@@ -62,6 +66,7 @@ class OtbrCollector:
         self._owns_client = client is None
         self._known_otbrs: dict[str, OtbrState] = {}
         self._known_networks: dict[str, ThreadNetworkState] = {}
+        self._last_device_collection_at: dict[str, datetime] = {}
         self._task: asyncio.Task[None] | None = None
         self._running = False
         self.last_poll_at: datetime | None = None
@@ -177,7 +182,7 @@ class OtbrCollector:
             use_legacy_fallback=self._config.otbr.use_legacy_node_fallback,
         )
         snapshot = reconciliation.snapshot
-        return await self._apply_reachable_state(
+        result = await self._apply_reachable_state(
             otbr_config,
             snapshot=snapshot,
             reconciliation=reconciliation,
@@ -193,6 +198,16 @@ class OtbrCollector:
             ),
             last_error=last_error,
         )
+        if (
+            self._config.otbr.allow_read_only_actions
+            and devices_ok
+            and thread_stack_active(snapshot.thread_state)
+        ):
+            await self._maybe_refresh_device_inventory(
+                otbr_config,
+                ext_pan_id=snapshot.ext_pan_id,
+            )
+        return result
 
     async def _poll_loop(self) -> None:
         while self._running:
@@ -493,6 +508,150 @@ class OtbrCollector:
                 },
             )
         )
+
+    async def _maybe_refresh_device_inventory(
+        self,
+        otbr_config: OtbrConfig,
+        *,
+        ext_pan_id: str | None,
+    ) -> None:
+        now = utc_now()
+        last_run = self._last_device_collection_at.get(otbr_config.id)
+        if (
+            last_run is not None
+            and (now - last_run).total_seconds()
+            < self._config.otbr.device_collection_interval_seconds
+        ):
+            return
+
+        assert self._client is not None
+        base_url = otbr_config.rest_url.rstrip("/")
+        try:
+            action_id = await self._start_device_collection_task(base_url)
+            if action_id is None:
+                return
+            completed = await self._wait_for_action(
+                base_url,
+                action_id,
+                timeout_seconds=self._config.otbr.device_collection_timeout_seconds,
+            )
+            if not completed:
+                return
+            devices_response = await self._client.get(f"{base_url}/api/devices")
+            if devices_response.status_code != 200:
+                return
+            inventory = parse_otbr_device_inventory(devices_response.json())
+            await self._persist_device_inventory(
+                otbr_config.id,
+                inventory,
+                ext_pan_id=ext_pan_id,
+            )
+            self._last_device_collection_at[otbr_config.id] = now
+            await apply_thread_identity_correlation(self._repository)
+        except httpx.HTTPError:
+            return
+
+    async def _start_device_collection_task(self, base_url: str) -> str | None:
+        assert self._client is not None
+        response = await self._client.post(
+            f"{base_url}/api/actions",
+            headers={"Content-Type": "application/vnd.api+json"},
+            json={
+                "data": [
+                    {
+                        "type": "updateDeviceCollectionTask",
+                        "attributes": {
+                            "maxAge": 30,
+                            "maxRetries": 5,
+                            "deviceCount": 50,
+                            "timeout": self._config.otbr.device_collection_timeout_seconds,
+                        },
+                    }
+                ]
+            },
+        )
+        if response.status_code not in {200, 201, 202}:
+            return None
+        payload = response.json()
+        data = payload.get("data")
+        if isinstance(data, list) and data:
+            item = data[0]
+            if isinstance(item, dict) and item.get("id"):
+                return str(item["id"])
+        if isinstance(data, dict) and data.get("id"):
+            return str(data["id"])
+        return None
+
+    async def _wait_for_action(
+        self,
+        base_url: str,
+        action_id: str,
+        *,
+        timeout_seconds: int,
+    ) -> bool:
+        assert self._client is not None
+        deadline = utc_now().timestamp() + timeout_seconds
+        while utc_now().timestamp() < deadline:
+            response = await self._client.get(f"{base_url}/api/actions/{action_id}")
+            if response.status_code != 200:
+                return False
+            payload = response.json()
+            data = payload.get("data")
+            attributes = data.get("attributes") if isinstance(data, dict) else None
+            if not isinstance(attributes, dict) and isinstance(data, list) and data:
+                item = data[0]
+                attributes = item.get("attributes") if isinstance(item, dict) else None
+            status = (
+                str(attributes.get("status") or "").lower() if isinstance(attributes, dict) else ""
+            )
+            if status in {"completed", "stopped"}:
+                return True
+            if status == "failed":
+                return False
+            await asyncio.sleep(2)
+        return False
+
+    async def _persist_device_inventory(
+        self,
+        otbr_id: str,
+        inventory: list[ParsedThreadDevice],
+        *,
+        ext_pan_id: str | None,
+    ) -> None:
+        now = utc_now()
+        seen_ids: set[str] = set()
+        for device in inventory:
+            object_id = f"{otbr_id}:{device.extended_address}"
+            seen_ids.add(object_id)
+            state = ThreadDeviceState(
+                id=object_id,
+                extended_address=device.extended_address,
+                ipv6_address=device.ipv6_address,
+                rloc_address=device.rloc_address,
+                role=device.role,
+                device_type=device.device_type,
+                hostname=device.hostname,
+                source_otbr_id=otbr_id,
+                ext_pan_id=ext_pan_id,
+                last_seen=now,
+            )
+            await self._repository.upsert_model_state(
+                CurrentStateType.THREAD_DEVICE,
+                object_id,
+                state,
+            )
+
+        stored = await self._repository.list_current_state(CurrentStateType.THREAD_DEVICE)
+        for raw in stored:
+            if not isinstance(raw, dict):
+                continue
+            object_id = str(raw.get("id") or "")
+            source_otbr_id = str(raw.get("source_otbr_id") or "")
+            if source_otbr_id == otbr_id and object_id and object_id not in seen_ids:
+                await self._repository.delete_current_state(
+                    CurrentStateType.THREAD_DEVICE,
+                    object_id,
+                )
 
 
 def classify_primary_network(

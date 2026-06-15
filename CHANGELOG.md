@@ -2,6 +2,14 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.5] - 2026-06-15
+
+### Added
+
+- OTBR read-only device inventory collection (`updateDeviceCollectionTask`) stores Thread extended addresses and OMR IPv6 per mesh device
+- Matter node thread identity via safe `ping_node` IPv6 capture, correlated to OTBR inventory without inferring parentage
+- Dashboard list and drilldown show Thread extended address and Thread IPv6 when observed
+
 ## [0.2.4] - 2026-06-15
 
 ### Changed

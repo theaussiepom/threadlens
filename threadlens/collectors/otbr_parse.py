@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from threadlens.utils.ids import normalize_ext_pan_id
+from threadlens.utils.ids import normalize_ext_pan_id, normalize_extended_address
+from threadlens.utils.network import normalize_ipv6
 
 _OPERATIONAL_ROLES = frozenset({"detached", "child", "router", "leader"})
 _THREAD_STATES = frozenset({"disabled", "detached", "child", "router", "leader"})
@@ -16,6 +17,16 @@ _NESTED_ATTRIBUTE_KEYS = (
     "network",
     "pendingDataset",
 )
+
+
+@dataclass(frozen=True)
+class ParsedThreadDevice:
+    extended_address: str
+    ipv6_address: str | None = None
+    rloc_address: str | None = None
+    role: str | None = None
+    device_type: str | None = None
+    hostname: str | None = None
 
 
 @dataclass(frozen=True)
@@ -320,3 +331,48 @@ def merge_snapshots(*snapshots: ParsedOtbrSnapshot) -> ParsedOtbrSnapshot:
             else snapshot.device_count,
         )
     return merged
+
+
+def _normalise_ipv6_field(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, list):
+        for item in value:
+            normalized = _normalise_ipv6_field(item)
+            if normalized:
+                return normalized
+        return None
+    return normalize_ipv6(str(value))
+
+
+def parse_otbr_device_inventory(payload: Any) -> list[ParsedThreadDevice]:
+    """Parse per-device Thread inventory from ``GET /api/devices``."""
+    if not isinstance(payload, dict):
+        return []
+    data = payload.get("data")
+    if not isinstance(data, list):
+        return []
+
+    devices: list[ParsedThreadDevice] = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        attributes = item.get("attributes")
+        if not isinstance(attributes, dict):
+            continue
+        ext_address = normalize_extended_address(
+            str(attributes.get("extAddress") or item.get("id") or "")
+        )
+        if ext_address is None:
+            continue
+        devices.append(
+            ParsedThreadDevice(
+                extended_address=ext_address,
+                ipv6_address=_normalise_ipv6_field(attributes.get("omrIpv6Address")),
+                rloc_address=_normalise_ipv6_field(attributes.get("rlocAddress")),
+                role=_normalise_role(_blank_to_none(attributes.get("role"))),
+                device_type=str(item.get("type") or "").strip() or None,
+                hostname=_blank_to_none(attributes.get("hostName") or attributes.get("hostname")),
+            )
+        )
+    return devices
