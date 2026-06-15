@@ -688,9 +688,7 @@ def _node_health_reason(node: dict[str, Any]) -> str | None:
     return None
 
 
-def _availability_unstable_signals(
-    node: dict[str, Any], node_events: list[dict[str, Any]]
-) -> bool:
+def _availability_unstable_signals(node: dict[str, Any], node_events: list[dict[str, Any]]) -> bool:
     recent_unavailable = sum(
         1 for e in node_events if e.get("event_type") == _NODE_UNAVAILABLE_EVENT
     )
@@ -720,9 +718,10 @@ def _node_classification_reason(
     if classification == "unavailable":
         return _node_health_reason(node) or REASON_LABELS["matter_node_unavailable"]
     if classification == "diagnostics_limited":
-        return read_probe.get("overview_label") or REASON_LABELS[
-            "matter_node_read_probe_diagnostics_limited"
-        ]
+        return (
+            read_probe.get("overview_label")
+            or REASON_LABELS["matter_node_read_probe_diagnostics_limited"]
+        )
     if classification == "needs_attention":
         return (
             read_probe.get("summary")
