@@ -8,18 +8,43 @@ from typing import Any
 import yaml
 
 from threadlens.models.reports import ThreadLensReport
+from threadlens.presentation.lens_reports import (
+    build_active_incidents,
+    build_collector_status,
+    build_domain_details,
+    build_executive_summary,
+    build_health_summary,
+    build_limitations,
+    redaction_profile_for_report,
+)
 from threadlens.report.redaction import DEFAULT_SECRETS_REMOVED, redact_structure
 
 
 def report_to_dict(report: ThreadLensReport, *, apply_redaction: bool = True) -> dict[str, Any]:
     payload = {
+        "product": report.product,
+        "version": report.version,
+        "generated_at": report.generated_at.isoformat(),
+        "site": report.site.model_dump(mode="json"),
+        "mode": report.mode,
+        "redaction_profile": redaction_profile_for_report(report),
+        "executive_summary": build_executive_summary(report),
+        "health_summary": build_health_summary(report),
+        "active_incidents": build_active_incidents(report),
+        "collector_status": build_collector_status(report),
+        "limitations": build_limitations(report),
+        "domain_details": build_domain_details(report),
+        "events_or_timeline": {
+            "recent": [event.model_dump(mode="json") for event in report.events.recent],
+        },
         "report": {
             "generated_at": report.generated_at.isoformat(),
+            "product": report.product,
             "tool": report.tool,
             "version": report.version,
             "window": report.window,
+            "mode": report.mode,
         },
-        "site": report.site.model_dump(mode="json"),
         "summary": report.summary.model_dump(mode="json"),
         "capabilities": report.capabilities.model_dump(mode="json"),
         "health": report.health.model_dump(mode="json"),
@@ -59,5 +84,6 @@ def report_to_yaml(report: ThreadLensReport, *, apply_redaction: bool = True) ->
 def default_redaction_summary(enabled: bool = True) -> dict[str, Any]:
     return {
         "enabled": enabled,
+        "profile": "public_safe" if enabled else "none",
         "secrets_removed": list(DEFAULT_SECRETS_REMOVED),
     }

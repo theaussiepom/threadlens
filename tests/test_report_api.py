@@ -212,8 +212,16 @@ async def test_report_yaml_and_json_serialisation(report_context) -> None:
     report = await ReportGenerator(ctx).generate(window="24h")
     yaml_payload = yaml.safe_load(report_to_yaml(report))
     json_payload = json.loads(json.dumps(report_to_dict(report)))
+    assert yaml_payload["product"] == "ThreadLens"
     assert yaml_payload["report"]["tool"] == "ThreadLens"
     assert json_payload["summary"]["health"] is not None
+    assert json_payload["health_summary"]["vocabulary"] == "lens_family"
+    assert json_payload["redaction_profile"] == "public_safe"
+    assert json_payload["executive_summary"]
+    assert json_payload["collector_status"]["read_probe_diagnostics"] in {
+        "available",
+        "limited_or_unavailable",
+    }
     assert yaml_payload["matter_nodes"][0]["subscription_flaps_24h"] is None
 
 
@@ -271,6 +279,30 @@ def test_invalid_window_returns_400(tmp_path: Path) -> None:
     with TestClient(create_server_app(config, active_mode=RuntimeMode.SERVER)) as client:
         response = client.get("/api/v1/report.yaml", params={"window": "30d"})
         assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_report_lens_alignment_sections(report_context) -> None:
+    ctx = await report_context()
+    report = await ReportGenerator(ctx).generate(window="24h")
+    payload = report_to_dict(report)
+    assert payload["product"] == "ThreadLens"
+    assert payload["version"]
+    assert payload["generated_at"]
+    assert payload["site"]["name"]
+    assert payload["mode"] == "server"
+    assert payload["limitations"]
+    assert payload["domain_details"]["thread_networks"]
+    assert payload["events_or_timeline"]["recent"] == payload["events"]["recent"]
+    unavailable = [item for item in payload["active_incidents"] if item["affected_entities"]]
+    assert unavailable
+    entity = unavailable[0]["affected_entities"][0]
+    assert entity["name"]
+    assert entity["classification"]
+    assert entity["reason"]
+    text = report_to_yaml(report)
+    assert "mqtt-secret" not in text
+    assert "super-secret" not in text
 
 
 @pytest.mark.asyncio

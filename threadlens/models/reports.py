@@ -165,6 +165,7 @@ class ReportEventsSection(BaseModel):
 
 class RedactionSummary(BaseModel):
     enabled: bool = True
+    profile: str = "public_safe"
     secrets_removed: list[str] = Field(default_factory=list)
 
 
@@ -178,8 +179,10 @@ class ReportFocusSection(BaseModel):
 
 class ThreadLensReport(BaseModel):
     generated_at: datetime
+    product: str = "ThreadLens"
     tool: str = "ThreadLens"
     version: str
+    mode: str = "server"
     window: str = "24h"
     site: ReportSite = Field(default_factory=ReportSite)
     summary: ReportSummary = Field(default_factory=ReportSummary)
