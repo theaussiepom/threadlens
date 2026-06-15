@@ -138,6 +138,11 @@ Both products follow a similar release posture:
 ThreadLens: [RELEASE.md](../RELEASE.md)  
 ZigbeeLens: [RELEASE_CHECKLIST.md](https://github.com/theaussiepom/zigbeelens/blob/main/RELEASE_CHECKLIST.md)
 
+<<<<<<< HEAD
+=======
+Both projects provide `./scripts/run-release-checks.sh` for automated pre-release validation.
+
+>>>>>>> 204c298 (chore: add ThreadLens release checklist)
 ---
 
 ## Related docs
