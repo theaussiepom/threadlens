@@ -62,6 +62,23 @@ def test_unavailable_remains_dominant_over_probe_failure() -> None:
     assert classify_matter_node(node, []) == "unavailable"
 
 
+def test_read_probe_block_ignores_stale_limited_when_last_ok() -> None:
+    block = _build_read_probe_block(
+        _node(
+            read_probe_diagnostics_available=True,
+            last_read_probe_ok=True,
+            last_read_probe_limited=True,
+            last_read_probe_note=(
+                "A device-specific read check did not complete, but the device responded "
+                "to a basic read check."
+            ),
+        )
+    )
+    assert block["limited"] is False
+    assert block["note"] is None
+    assert block["overview_label"] == "Read checks OK"
+
+
 def test_read_probe_block_exposes_friendly_overview_labels() -> None:
     ok_block = _build_read_probe_block(
         _node(

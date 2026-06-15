@@ -611,9 +611,12 @@ def _build_read_probe_block(node: dict[str, Any]) -> dict[str, Any]:
     failures_24h = node.get("read_probe_failures_24h")
     successes_24h = node.get("read_probe_successes_24h")
     last_ok = node.get("last_read_probe_ok")
+    if limited and last_ok is True:
+        # Older releases persisted fallback successes as limited; treat as healthy.
+        limited = False
     available = node.get("available")
     probe_label = node.get("last_probe_label") or "Read check"
-    note = node.get("last_read_probe_note")
+    note = None if (limited is False and last_ok is True) else node.get("last_read_probe_note")
 
     summary: str | None = None
     overview_label: str | None = None
