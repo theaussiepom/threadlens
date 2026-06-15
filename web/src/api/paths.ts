@@ -23,9 +23,14 @@ export function resolveUrl(path: string): string {
 }
 
 export const DASHBOARD_PATH = "api/v1/dashboard";
+export const STATUS_PATH = "api/v1/status";
 export const REPORT_YAML_PATH = "api/v1/report.yaml";
 export const REPORT_JSON_PATH = "api/v1/report.json";
 
 export function dashboardUrl(): string {
   return resolveUrl(DASHBOARD_PATH);
+}
+
+export function statusUrl(): string {
+  return resolveUrl(STATUS_PATH);
 }

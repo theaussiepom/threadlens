@@ -1,41 +1,76 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Card, SectionHeading } from "@/components/ui";
-import { NODE_STATUS_LEGEND, RECENT_WINDOW_DESCRIPTION } from "@/utils/health";
+import { fetchStatus } from "@/api/status";
+import { useDashboardContext } from "@/context/DashboardContext";
+import { Badge, Card, SectionHeading } from "@/components/ui";
+import {
+  classificationPriority,
+  DASHBOARD_LABELS,
+  incidentRules,
+  LIMITATIONS,
+  networkHealthRows,
+  nodeClassificationRows,
+  OBSERVATION_SOURCES,
+  otbrHealthRows,
+  SEVERITY_ROWS,
+  thresholdRows,
+  type DiagnosticsConfig,
+  type GuideSeverity,
+} from "@/lib/monitoringGuide";
+import { severityLabel } from "@/lib/severity";
 
-const DATA_SOURCES = [
-  {
-    title: "OTBR REST",
-    detail:
-      "Read-only polling of configured OpenThread Border Routers. Role, network name, device inventory, and reachability. Thread stack state is shown explicitly — REST reachability does not mean the Thread radio is active.",
-  },
-  {
-    title: "Matter Server websocket",
-    detail:
-      "Passive observer of python-matter-server inventory and availability. ThreadLens only sends read-only commands (listen, get nodes, read attribute, ping). It never commissions, commands, or mutates nodes.",
-  },
-  {
-    title: "mDNS / DNS-SD",
-    detail:
-      "Observes configured service types (_trel._udp, _meshcop._udp, _matter._tcp, _matterc._udp). Requires host networking on Linux for reliable LAN visibility from Docker.",
-  },
-  {
-    title: "TREL services",
-    detail:
-      "Extracted from mDNS TREL records. Foreign or observed-other Extended PAN IDs are informational — ThreadLens does not call them competing networks.",
-  },
-  {
-    title: "Optional ThreadLens agents",
-    detail:
-      "Remote agents can expose additional read-only observations from other hosts. Agents never mutate Thread or Matter state.",
-  },
-];
+function SeverityBadge({ severity }: { severity: GuideSeverity }) {
+  return <Badge severity={severity}>{severityLabel(severity)}</Badge>;
+}
 
-const LIMITATIONS = [
-  "Subscription, CASE, and command diagnostics are unavailable unless structured Matter Server events expose them.",
-  "ThreadLens never infers subscription flaps from availability flaps.",
-  "mDNS/TREL visibility does not prove device parentage or mesh topology.",
-  "Initial mDNS discovery after startup is baseline observation, not service flapping.",
-  "Unavailable metrics are reported as null or explicit capability flags — never inferred as zero.",
+function GuideTable({
+  headers,
+  rows,
+}: {
+  headers: string[];
+  rows: ReactNode[][];
+}) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-zl-border">
+      <table className="w-full min-w-[640px] text-left text-sm">
+        <thead className="border-b border-zl-border bg-zl-surface-2/80">
+          <tr>
+            {headers.map((h) => (
+              <th key={h} className="px-3 py-2.5 font-semibold text-zl-text">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zl-border/60">
+          {rows.map((cells, i) => (
+            <tr key={i} className="align-top hover:bg-zl-surface-2/40">
+              {cells.map((cell, j) => (
+                <td key={j} className="px-3 py-3 text-zl-text">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const SECTIONS = [
+  { id: "pipeline", label: "Pipeline" },
+  { id: "severity", label: "Severity levels" },
+  { id: "sources", label: "What we observe" },
+  { id: "devices", label: "Node classification" },
+  { id: "otbr", label: "OTBR health" },
+  { id: "networks", label: "Network health" },
+  { id: "incidents", label: "Incidents" },
+  { id: "dashboard", label: "Dashboard labels" },
+  { id: "thresholds", label: "Your thresholds" },
+  { id: "homeassistant", label: "Home Assistant" },
+  { id: "live", label: "Live updates" },
+  { id: "limits", label: "Limitations" },
 ];
 
 const HA_PATHS = [
@@ -62,82 +97,218 @@ const HA_PATHS = [
 ];
 
 export function HowItWorksPage() {
+  const { data, liveState } = useDashboardContext();
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsConfig>({});
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchStatus(controller.signal)
+      .then((status) => setDiagnostics(status.diagnostics ?? {}))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  const nodes = nodeClassificationRows(diagnostics);
+  const otbrs = otbrHealthRows(diagnostics);
+  const incidents = incidentRules(diagnostics);
+  const liveLabel =
+    liveState === "open" ? "Live (SSE)" : liveState === "connecting" ? "Connecting" : "Polling (30s)";
+
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">How it works</h1>
-        <p className="mt-1 text-zl-muted">
-          Read-only Thread and Matter-over-Thread observability — what ThreadLens watches, how health is
-          classified, and what it will never claim.
+    <div className="max-w-5xl space-y-8">
+      <header className="space-y-3">
+        <h1 className="text-2xl font-semibold tracking-tight">How monitoring works</h1>
+        <p className="max-w-3xl text-zl-muted leading-relaxed">
+          ThreadLens watches OTBR REST, Matter Server, and mDNS/TREL on your LAN, classifies health,
+          and shows evidence with explicit limitations. Nothing here mutates your Thread or Matter
+          network — this page documents exactly what is observed and how decisions are made.
         </p>
-      </div>
-
-      <Card title="What ThreadLens is">
-        <p className="text-sm leading-relaxed text-zl-muted">
-          ThreadLens collects observations from your LAN, stores them in local SQLite, classifies health,
-          and surfaces evidence on this dashboard and in redacted reports. It is designed for Home Assistant
-          environments but is not hard-coupled to Home Assistant Core.
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-zl-muted">
-          The guiding question on the{" "}
-          <Link to="/" className="text-zl-accent hover:underline">
-            Overview
-          </Link>{" "}
-          page: <em>Is anything broken, where, and what does the evidence say?</em>
-        </p>
-      </Card>
-
-      <section className="space-y-3">
-        <SectionHeading>What we observe</SectionHeading>
-        <div className="space-y-3">
-          {DATA_SOURCES.map((item) => (
-            <Card key={item.title} title={item.title}>
-              <p className="text-sm leading-relaxed text-zl-muted">{item.detail}</p>
-            </Card>
+        <nav className="flex flex-wrap gap-2 pt-1" aria-label="On this page">
+          {SECTIONS.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className="rounded-full border border-zl-border px-3 py-1 text-xs text-zl-muted hover:border-zl-accent/40 hover:text-zl-accent"
+            >
+              {s.label}
+            </a>
           ))}
-        </div>
+        </nav>
+      </header>
+
+      <section id="pipeline">
+        <Card title="Monitoring pipeline" subtitle="What happens after each observation cycle">
+          <ol className="space-y-3 text-sm leading-relaxed text-zl-text">
+            <li>
+              <strong className="font-medium">Collect</strong> — Core polls OTBR REST, listens on
+              Matter Server websockets, and observes mDNS/TREL (all read-only).
+            </li>
+            <li>
+              <strong className="font-medium">Normalize &amp; store</strong> — Observations update
+              SQLite (inventory, availability, probes, bridge state, events).
+            </li>
+            <li>
+              <strong className="font-medium">Classify health</strong> — Per-node, OTBR, network, and
+              collector rules run (thresholds below).
+            </li>
+            <li>
+              <strong className="font-medium">Assess incidents</strong> — Overview incident summary
+              combines unavailable nodes, needs-attention signals, and infrastructure health.
+            </li>
+            <li>
+              <strong className="font-medium">Present</strong> — Dashboard, devices, infrastructure,
+              timeline, and reports show conclusions with evidence and limitations.
+            </li>
+          </ol>
+          <p className="mt-4 text-sm text-zl-muted">
+            The dashboard refreshes via SSE when available ({liveLabel}
+            {data?.threadlens?.version ? ` · Core ${data.threadlens.version}` : ""}). Health
+            recalculates after collector updates and probe results.
+          </p>
+        </Card>
       </section>
 
-      <Card title="How Matter node health is classified" subtitle={RECENT_WINDOW_DESCRIPTION}>
-        <dl className="grid gap-4">
-          {NODE_STATUS_LEGEND.map((entry) => (
-            <div key={entry.key}>
-              <dt className="text-sm font-medium text-zl-text">{entry.label}</dt>
-              <dd className="mt-1 text-sm text-zl-muted">{entry.description}</dd>
-            </div>
+      <section id="severity" className="space-y-3">
+        <SectionHeading>Severity levels</SectionHeading>
+        <GuideTable
+          headers={["Severity", "UI label", "Meaning"]}
+          rows={SEVERITY_ROWS.map((r) => [
+            <SeverityBadge key="s" severity={r.severity} />,
+            r.label,
+            r.meaning,
+          ])}
+        />
+      </section>
+
+      <section id="sources" className="space-y-3">
+        <SectionHeading>What we observe (read-only)</SectionHeading>
+        <GuideTable
+          headers={["Source", "Used for"]}
+          rows={OBSERVATION_SOURCES.map((r) => [r.source, r.use])}
+        />
+      </section>
+
+      <section id="devices" className="space-y-4">
+        <SectionHeading>Matter node classification</SectionHeading>
+        <p className="text-sm text-zl-muted">
+          Each node gets one dashboard classification (first match wins). Classification order:
+        </p>
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-zl-muted">
+          {classificationPriority().map((step) => (
+            <li key={step}>{step}</li>
           ))}
-        </dl>
-        <p className="mt-4 text-sm text-zl-muted">
-          See live classifications on the{" "}
+        </ol>
+        <GuideTable
+          headers={["Classification", "When it applies", "Effect", "Typical severity", "UI label"]}
+          rows={nodes.map((r) => [
+            <code key="f" className="font-mono text-xs">
+              {r.label}
+            </code>,
+            r.condition,
+            r.result,
+            <SeverityBadge key="s" severity={r.severity} />,
+            r.uiLabel,
+          ])}
+        />
+        <p className="text-sm text-zl-muted">
+          See live groups on{" "}
           <Link to="/devices" className="text-zl-accent hover:underline">
             Devices
           </Link>{" "}
-          page and status legend on{" "}
+          and the status legend on{" "}
           <Link to="/" className="text-zl-accent hover:underline">
             Overview
           </Link>
           .
         </p>
-      </Card>
+      </section>
 
-      <Card title="What ThreadLens does not infer">
-        <ul className="list-disc space-y-2 pl-5 text-sm text-zl-muted">
-          {LIMITATIONS.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </Card>
+      <section id="otbr" className="space-y-3">
+        <SectionHeading>OTBR health</SectionHeading>
+        <GuideTable
+          headers={["Signal", "When it applies", "Effect", "Severity", "UI wording"]}
+          rows={otbrs.map((r) => [
+            <code key="f" className="font-mono text-xs">
+              {r.label}
+            </code>,
+            r.condition,
+            r.result,
+            <SeverityBadge key="s" severity={r.severity} />,
+            r.uiLabel,
+          ])}
+        />
+      </section>
 
-      <Card title="Read-only guarantee">
-        <p className="text-sm leading-relaxed text-zl-muted">
-          ThreadLens never commissions Thread devices, changes datasets, sends Matter control commands,
-          or runs mutating OTBR actions. Read probes are safe read-only Matter attribute checks — they do
-          not move blinds or change device state. ThreadLens does not use SSH, Docker socket access, or log
-          scraping in normal operation.
+      <section id="networks" className="space-y-3">
+        <SectionHeading>Thread network health</SectionHeading>
+        <GuideTable
+          headers={["State", "Condition", "Effect", "Severity"]}
+          rows={networkHealthRows().map((r) => [
+            r.label,
+            r.condition,
+            r.result,
+            <SeverityBadge key="s" severity={r.severity} />,
+          ])}
+        />
+      </section>
+
+      <section id="incidents" className="space-y-3">
+        <SectionHeading>Incident assessment</SectionHeading>
+        <p className="text-sm text-zl-muted">
+          Overview incident state is conservative: unavailable nodes and real infrastructure problems
+          open an incident; needs-attention and unstable nodes contribute watch-level findings.
         </p>
-      </Card>
+        <GuideTable
+          headers={["Type", "Title", "Opens when", "Severity", "Scope", "Notes"]}
+          rows={incidents.map((r) => [
+            r.type,
+            r.title,
+            r.trigger,
+            <SeverityBadge key="s" severity={r.severity} />,
+            r.scope,
+            r.notes ?? "—",
+          ])}
+        />
+      </section>
 
-      <section className="space-y-3">
+      <section id="dashboard" className="space-y-3">
+        <SectionHeading>Where dashboard labels come from</SectionHeading>
+        <GuideTable
+          headers={["UI surface", "Source"]}
+          rows={DASHBOARD_LABELS.map((r) => [r.surface, r.source])}
+        />
+      </section>
+
+      <section id="thresholds" className="space-y-3">
+        <SectionHeading>Your active thresholds</SectionHeading>
+        {Object.keys(diagnostics).length === 0 ? (
+          <p className="text-sm text-zl-muted">
+            Thresholds load from Core config via{" "}
+            <code className="rounded bg-zl-surface-2 px-1 font-mono text-xs">/api/v1/status</code>.
+            Refresh this page if the section is empty.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-zl-muted">
+              Values below are from this Core instance&apos;s{" "}
+              <code className="rounded bg-zl-surface-2 px-1 font-mono text-xs">config.yaml</code>.
+              Edit config and restart Core to change them.
+            </p>
+            <GuideTable
+              headers={["Config key", "Value", "Used for"]}
+              rows={thresholdRows(diagnostics).map(([key, value, used]) => [
+                <code key="k" className="font-mono text-xs">
+                  {key}
+                </code>,
+                String(value),
+                used,
+              ])}
+            />
+          </>
+        )}
+      </section>
+
+      <section id="homeassistant" className="space-y-3">
         <SectionHeading>Home Assistant paths</SectionHeading>
         <div className="space-y-3">
           {HA_PATHS.map((item) => (
@@ -148,28 +319,43 @@ export function HowItWorksPage() {
         </div>
       </section>
 
-      <Card title="Live updates">
-        <p className="text-sm leading-relaxed text-zl-muted">
-          This dashboard prefers a Server-Sent Events (SSE) stream from Core for near-real-time refresh.
-          When SSE is unavailable — for example behind a reverse proxy that buffers event streams — the UI
-          falls back to 30-second polling. Use the header refresh button for an immediate manual update.
-        </p>
-      </Card>
+      <section id="live">
+        <Card title="Live updates">
+          <p className="text-sm leading-relaxed text-zl-muted">
+            This dashboard prefers a Server-Sent Events (SSE) stream from Core for near-real-time
+            refresh. When SSE is unavailable — for example behind a reverse proxy that buffers event
+            streams — the UI falls back to 30-second polling. Use the header refresh button for an
+            immediate manual update.
+          </p>
+        </Card>
+      </section>
 
-      <Card title="Reports and diagnostics">
-        <p className="text-sm leading-relaxed text-zl-muted">
-          Factual YAML and JSON reports are generated from the same stored observations as this dashboard.
-          Reports redact secrets defensively. Raw payload sections for support are on the{" "}
+      <section id="limits" className="space-y-3">
+        <SectionHeading>What ThreadLens does not claim</SectionHeading>
+        <Card title="Read-only guarantee">
+          <p className="mb-4 text-sm leading-relaxed text-zl-muted">
+            ThreadLens never commissions Thread devices, changes datasets, sends Matter control
+            commands, or runs mutating OTBR actions. Read probes are safe read-only Matter attribute
+            checks — they do not move blinds or change device state.
+          </p>
+          <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-zl-muted">
+            {LIMITATIONS.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </Card>
+        <p className="text-sm text-zl-muted">
+          Raw payload sections for support are on{" "}
           <Link to="/diagnostics" className="text-zl-accent hover:underline">
             Diagnostics
-          </Link>{" "}
-          page; downloadable reports are on{" "}
+          </Link>
+          ; downloadable reports are on{" "}
           <Link to="/reports" className="text-zl-accent hover:underline">
             Reports
           </Link>
           .
         </p>
-      </Card>
+      </section>
     </div>
   );
 }

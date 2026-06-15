@@ -24,6 +24,21 @@ def _client(tmp_path: Path) -> TestClient:
     return TestClient(create_server_app(config, active_mode=RuntimeMode.SERVER))
 
 
+def test_status_exposes_diagnostics_thresholds(tmp_path: Path) -> None:
+    config = ThreadLensConfig(
+        storage={"sqlite_path": str(tmp_path / "threadlens.db")},
+        mdns=MdnsConfig(enabled=False),
+        flapping={"matter_node_read_probe_failures_degraded_24h": 5},
+    )
+    with TestClient(create_server_app(config, active_mode=RuntimeMode.SERVER)) as client:
+        response = client.get("/api/v1/status")
+        assert response.status_code == 200
+        diagnostics = response.json()["diagnostics"]
+        assert diagnostics["matter_node_read_probe_failures_degraded_24h"] == 5
+        assert "matter_probe_mode" in diagnostics
+        assert "otbr_poll_interval_seconds" in diagnostics
+
+
 def test_dashboard_endpoint_exists_and_returns_json(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
         response = client.get("/api/v1/dashboard")
@@ -31,7 +46,7 @@ def test_dashboard_endpoint_exists_and_returns_json(tmp_path: Path) -> None:
         assert response.headers["content-type"].startswith("application/json")
         body = response.json()
         assert body["threadlens"]["api_connected"] is True
-        assert body["threadlens"]["version"] == "0.2.15"
+        assert body["threadlens"]["version"] == "0.2.16"
         assert "incident" in body
         assert "matter" in body
         assert "otbrs" in body
