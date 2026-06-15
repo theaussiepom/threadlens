@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from threadlens.server import dashboard as dashboard_module
 from threadlens.server.dashboard import (
@@ -24,6 +24,11 @@ HEALTHY_HEALTH = {
 }
 
 SERVER = "study_matter"
+
+
+def _recent_iso(*, hours_ago: float = 0, minutes_ago: float = 0) -> str:
+    t = datetime.now(UTC) - timedelta(hours=hours_ago, minutes=minutes_ago)
+    return t.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _subj(node_id: int) -> str:
@@ -242,8 +247,8 @@ def test_node_availability_metrics_include_ongoing_outage():
 
 def test_payload_includes_availability_metrics_on_nodes():
     events = [
-        _event(3, "matter_node.unavailable", "2026-06-14T10:00:00Z"),
-        _event(3, "matter_node.recovered", "2026-06-14T10:05:00Z"),
+        _event(3, "matter_node.unavailable", _recent_iso(minutes_ago=30)),
+        _event(3, "matter_node.recovered", _recent_iso(minutes_ago=25)),
     ]
     payload = _payload(
         [_node(3, True, availability_flaps_24h=1)],
