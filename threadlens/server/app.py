@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-
-import asyncio
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
