@@ -30,10 +30,12 @@ Supported modes:
 
 | Mode | Behaviour |
 |------|-----------|
-| `off` | No active read probes |
+| `disabled` | No active read probes |
 | `conservative` | Infrequent generic/root Matter read checks only. Best default for Thread networks |
-| `standard` | Generic/root checks plus safe device-type checks when ThreadLens can confidently infer them |
+| `standard` | Inferred safe device-type checks first, then generic/root fallback |
 | `diagnostic` | More frequent read checks and more detail, still read-only |
+
+Use `mode: disabled` to turn probes off. Earlier validation builds also accepted `"off"`, but `disabled` is preferred because some YAML parsers treat unquoted `off` as a boolean.
 
 ### Mode timing defaults
 
@@ -41,11 +43,31 @@ When `advanced.interval_seconds` is not set explicitly:
 
 | Mode | Default interval |
 |------|------------------|
+| `disabled` | 3600 seconds (unused while disabled) |
 | `conservative` | 3600 seconds |
 | `standard` | 1800 seconds |
 | `diagnostic` | 900 seconds |
 
 **Caution:** Start with `conservative` and `max_concurrent: 1` on Thread networks.
+
+### Temporary validation interval
+
+During live validation only, you may shorten the interval to rotate through nodes faster:
+
+```yaml
+matter:
+  probes:
+    mode: standard
+    schedule_enabled: true
+    advanced:
+      interval_seconds: 120
+      timeout_seconds: 10
+      max_concurrent: 1
+      jitter_seconds: 30
+      ping_enabled: false
+```
+
+Return to a longer interval (for example `1800` or `3600` seconds) after validation.
 
 ## Advanced overrides
 
@@ -77,24 +99,34 @@ Top-level tuning keys such as `interval_seconds` or `attributes` are not accepte
 
 ### How paths are chosen
 
-ThreadLens uses a probe planner with this ladder:
+ThreadLens uses a probe planner with mode-specific ordering.
+
+**Conservative**
 
 1. Per-node advanced override, if configured
-2. Last known successful probe for this node, if still valid
+2. Last known successful generic probe, if still valid
 3. Generic/root Basic Information read
-4. Descriptor/root structure read if needed
-5. Device-specific safe read when mode allows and endpoint/cluster data supports it
-6. Optional ping when enabled
 
-For Window Covering devices, ThreadLens prefers the actual endpoint where cluster `258` appears in Matter Server node data instead of assuming endpoint `1`.
+**Standard**
+
+1. Per-node advanced override, if configured
+2. Inferred safe device-specific read (for example blind/window-covering status) when confidently inferred
+3. Last known successful probe, if still valid
+4. Generic/root Basic Information fallback
+
+**Diagnostic**
+
+1. Overrides, device-specific, cached success, generic fallback, then descriptor reads when useful
+
+For Window Covering devices, ThreadLens prefers the actual endpoint where cluster `258` appears in Matter Server node data instead of assuming endpoint `1`. When no cluster `258` keys are present but the node is confidently inferred as a blind/shade, `1/258/10` may be tried first and falls back to generic reads if unsupported.
 
 Unsupported device-specific reads fall back to generic reads where possible and do **not** make a node unhealthy when a generic read succeeds.
 
 ## Health and dashboard semantics
 
-- **Read checks OK** — a generic safe read succeeded recently
+- **Read checks OK** — a safe read succeeded recently
 - **Read probe issue** — generic safe reads failed while the node is available
-- **Read diagnostics limited** — unsupported or inconclusive attribute; informational only
+- **Read diagnostics limited** — a device-specific read was unsupported or inconclusive, but a generic read succeeded
 
 The dashboard overview shows friendly labels only. Node drilldown shows the probe type first and the technical path as advanced detail.
 

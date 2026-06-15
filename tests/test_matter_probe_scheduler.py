@@ -21,7 +21,7 @@ class FakeSleep:
 
 @pytest.mark.asyncio
 async def test_scheduler_does_not_start_when_disabled() -> None:
-    config = MatterProbeConfig(mode=ProbeMode.OFF, schedule_enabled=False)
+    config = MatterProbeConfig(mode=ProbeMode.DISABLED, schedule_enabled=False)
     scheduler = MatterProbeScheduler(
         config=config,
         list_available_node_ids=lambda: [1, 2],

@@ -61,7 +61,9 @@ matter_servers:
 # Optional Matter read probes — disabled by default. See docs/matter-read-probes.md.
 # matter:
 #   probes:
-#     mode: conservative
+#     mode: disabled
+# Or to enable:
+#   mode: conservative
 #     schedule_enabled: true
 #     advanced:
 #       interval_seconds: 1800
