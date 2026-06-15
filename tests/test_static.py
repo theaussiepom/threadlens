@@ -151,8 +151,26 @@ def test_repo_static_dir_is_present_for_build_output() -> None:
     assert (REPO_STATIC / ".gitkeep").is_file()
 
 
+def test_dashboard_ui_allows_ha_iframe_embedding(tmp_path: Path, monkeypatch) -> None:
+    static = tmp_path / "static"
+    _write_static(static, with_assets=True)
+    monkeypatch.setenv("THREADLENS_STATIC_DIR", str(static))
+    with _client(tmp_path) as client:
+        root = client.get("/")
+        assert root.status_code == 200
+        assert root.headers.get("content-security-policy") == "frame-ancestors *"
+
+        assets = client.get("/assets/app.js")
+        assert assets.status_code == 200
+        assert assets.headers.get("content-security-policy") == "frame-ancestors *"
+
+        api = client.get("/api/v1/health")
+        assert api.status_code == 200
+        assert "content-security-policy" not in api.headers
+
+
 def test_api_landing_page_includes_core_links() -> None:
-    page = api_landing_page(version="0.2.13")
+    page = api_landing_page(version="0.2.14")
     assert "Dashboard static assets are not installed" in page
     assert "/api/v1/dashboard" in page
     assert "/docs" in page

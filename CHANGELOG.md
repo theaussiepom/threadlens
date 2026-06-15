@@ -2,6 +2,12 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.14] - 2026-06-15
+
+### Changed
+
+- Dashboard responses set `Content-Security-Policy: frame-ancestors *` on `/` and `/assets/*` so Home Assistant can embed the Core UI in the companion panel iframe
+
 ## [0.2.13] - 2026-06-15
 
 ### Changed

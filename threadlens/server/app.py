@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 
 from threadlens import __version__
@@ -96,6 +96,15 @@ def create_server_app(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> 
         version=__version__,
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def allow_embedded_ui(request: Request, call_next):
+        """Allow Core dashboard iframe embedding from Home Assistant companion panel."""
+        response = await call_next(request)
+        if request.url.path == "/" or request.url.path.startswith("/assets"):
+            response.headers["Content-Security-Policy"] = "frame-ancestors *"
+        return response
+
     app.state.config = config
     app.state.storage_ready = False
     app.state.mdns_observer = None
