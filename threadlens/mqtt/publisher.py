@@ -15,12 +15,7 @@ from threadlens.collectors.otbr_rest import OtbrCollector
 from threadlens.config import ThreadLensConfig
 from threadlens.health import HealthEngine
 from threadlens.health.engine import HealthContext
-from threadlens.models.state import (
-    MatterNodeState,
-    MatterServerState,
-    OtbrState,
-    ThreadNetworkState,
-)
+from threadlens.models.state import MatterNodeState
 from threadlens.mqtt.client import AiomqttTransport, MqttTransport, dumps_json
 from threadlens.mqtt.discovery import (
     EntityPublication,
@@ -28,7 +23,7 @@ from threadlens.mqtt.discovery import (
     build_publications,
     discovery_cleanup_payload,
 )
-from threadlens.mqtt.topics import TopicBuilder
+from threadlens.mqtt.topics import LEGACY_DISCOVERY_TOPICS, TopicBuilder
 from threadlens.storage.repositories import CurrentStateType, StorageRepository
 from threadlens.utils.time import utc_now
 
@@ -136,6 +131,14 @@ class MqttPublisher:
                 retain=True,
             )
 
+    async def publish_legacy_discovery_cleanup(self) -> None:
+        """Publish empty retained payloads for known legacy discovery topics."""
+        if not self._config.homeassistant.mqtt_discovery_enabled:
+            return
+        async with self._transport_factory() as transport:
+            for topic in LEGACY_DISCOVERY_TOPICS:
+                await transport.publish(topic, discovery_cleanup_payload(), retain=True)
+
     async def _run(self) -> None:
         reconnect_delay = 5.0
         while self._running:
@@ -171,9 +174,10 @@ class MqttPublisher:
             snapshot = await self._build_snapshot()
             publications = build_publications(snapshot)
             await self._publish_entities(transport, publications)
-        await transport.publish(
-            self._topics.status, "running", retain=self._config.mqtt.retain_state
-        )
+        elif self._config.mqtt.enabled:
+            await transport.publish(
+                self._topics.status, "running", retain=self._config.mqtt.retain_state
+            )
         self._last_publish_at = utc_now()
 
     async def _publish_entities(
@@ -182,10 +186,17 @@ class MqttPublisher:
         publications: list[EntityPublication],
     ) -> None:
         for publication in publications:
-            discovery_topic = self._topics.discovery_topic(
-                publication.component,
-                publication.object_id,
-            )
+            if publication.object_id.startswith("threadlens_matter_node_"):
+                discovery_topic = self._topics.legacy_discovery_topic(
+                    publication.component,
+                    publication.object_id,
+                )
+            else:
+                entity_key = publication.object_id.removeprefix("threadlens_")
+                discovery_topic = self._topics.discovery_topic(
+                    publication.component,
+                    entity_key,
+                )
             if discovery_topic not in self._published_discovery:
                 await transport.publish(
                     discovery_topic,
@@ -226,30 +237,14 @@ class MqttPublisher:
             )
         )
         health = await engine.build_report(version=self._version, mode=self._mode)
-        report_last_generated_at = await self._repository.get_metadata("report_last_generated_at")
-        host = self._config.server.host
-        if host in {"0.0.0.0", "::"}:
-            host = "127.0.0.1"
-        report_url = f"http://{host}:{self._config.server.port}/api/v1/report.yaml"
         return PublishSnapshot(
             config=self._config,
             version=self._version,
             mode=self._mode,
             storage_ready=self._storage_ready,
             health=health,
-            otbr_states=await self._load_states(CurrentStateType.OTBR, OtbrState),
-            matter_servers=await self._load_states(
-                CurrentStateType.MATTER_SERVER,
-                MatterServerState,
-            ),
             matter_nodes=await self._load_states(CurrentStateType.MATTER_NODE, MatterNodeState),
-            thread_networks=await self._load_states(
-                CurrentStateType.THREAD_NETWORK,
-                ThreadNetworkState,
-            ),
             collector_status=self._collector_status(),
-            report_url=report_url,
-            report_last_generated_at=report_last_generated_at,
         )
 
     async def _load_states(self, object_type: CurrentStateType, model_type: type[Any]) -> list[Any]:

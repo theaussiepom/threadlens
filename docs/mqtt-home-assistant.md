@@ -1,11 +1,8 @@
 # MQTT and Home Assistant
 
-ThreadLens integrates with Home Assistant in two ways:
+ThreadLens integrates with Home Assistant via optional **MQTT Discovery** summary entities.
 
-1. **MQTT Discovery** (optional) — health and inventory entities via the MQTT broker. See below.
-2. **HACS integration** — familiar Matter **device names** pushed to Core. See [home-assistant-integration.md](home-assistant-integration.md).
-
-MQTT Discovery does **not** supply `ha_device_name` on Matter nodes. For blind names on the ThreadLens dashboard, install and configure the [ThreadLens HACS integration](https://github.com/theaussiepom/threadlens-ha-integration).
+**Backward compatibility:** Phase 3C intentionally replaces the previous MQTT entity model. After deploying, delete stale retained discovery configs and remove old HA entities (see [Migration](#migration)).
 
 ## Lens family MQTT conventions
 
@@ -13,23 +10,61 @@ Shared rules across [ThreadLens](https://github.com/theaussiepom/threadlens) and
 
 | Rule | Detail |
 |------|--------|
-| **Global summary by default** | Overall health, environment counts, collector status — grouped HA devices |
-| **Avoid per-device spam** | `per_node_entities: false` and `per_trel_service_entities: false` for large fabrics |
-| **Unknown vs zero** | Use `null` / capability flags when unobserved; use `0` only for observed zero |
-| **Diagnostic naming** | Entity names describe status (“health”, “unavailable count”), not control |
-| **Availability** | Product liveness via availability topic (`online` / `offline`) |
-| **No secrets** | Passwords, keys, and broker credentials never appear in discovery payloads |
+| **Global summary by default** | Seven summary sensors on one HA device |
+| **No per-device spam** | `per_node_entities: false` by default |
+| **Unknown vs zero** | `unknown` when not observable; `0` only for observed zero |
+| **Diagnostic naming** | Names describe status, not control — no command-failure wording |
+| **Availability** | `threadlens/status` with `online` / `offline` |
+| **No secrets** | Passwords and keys never appear in discovery payloads |
 
 ZigbeeLens equivalent: [mqtt-discovery.md](https://github.com/theaussiepom/zigbeelens/blob/main/docs/mqtt-discovery.md).
 
-## MQTT Discovery (entities)
+## Clean summary entities (default)
 
-## Prerequisites
+All entities group under one Home Assistant device: **ThreadLens**.
 
-1. Home Assistant **MQTT integration** enabled
-2. MQTT broker reachable from ThreadLens (often the HA add-on broker or Mosquitto)
-3. `mqtt.enabled: true` in ThreadLens config
-4. `homeassistant.mqtt_discovery_enabled: true` to publish Home Assistant entities
+| HA entity | State topic | Purpose |
+|-----------|-------------|---------|
+| ThreadLens Health | `threadlens/summary/health/state` | Overall Lens bucket |
+| ThreadLens Issues | `threadlens/summary/issues/state` | Total issue count |
+| ThreadLens Unavailable Nodes | `threadlens/summary/unavailable/state` | Unavailable Matter node count |
+| ThreadLens Needs Attention | `threadlens/summary/needs_attention/state` | Needs attention count |
+| ThreadLens Recently Unstable | `threadlens/summary/recently_unstable/state` | Recently unstable count |
+| ThreadLens Diagnostics Limited | `threadlens/summary/diagnostics_limited/state` | Diagnostics limited count |
+| ThreadLens Matter Read Probe Issues | `threadlens/summary/matter_read_probe_issues/state` | Read probe issue count |
+
+Attributes publish to matching `.../attributes` topics and include Lens bucket metadata (`product`, `version`, `lens_bucket`, counts, `redaction_profile`).
+
+## Topic patterns
+
+| Kind | Pattern |
+|------|---------|
+| Discovery config | `homeassistant/sensor/threadlens/<entity_key>/config` |
+| State | `threadlens/summary/<entity_key>/state` |
+| Attributes | `threadlens/summary/<entity_key>/attributes` |
+| Availability | `threadlens/status` |
+
+## Unknown vs zero
+
+| Situation | MQTT state |
+|-----------|------------|
+| Read probe diagnostics unavailable | Matter Read Probe Issues → `unknown` |
+| Read probe diagnostics available, no issues | `0` |
+| Read probe diagnostics available, one issue | `1` |
+| Observation unreliable (no collectors/nodes) | Count entities → `unknown` |
+
+## Optional per-node entities
+
+Per-node Matter entities (including read probe OK/failures) publish only when explicitly enabled:
+
+```yaml
+mqtt:
+  per_node_entities: true
+```
+
+Default is `false` to avoid entity spam on large fabrics.
+
+## Configuration
 
 ```yaml
 mqtt:
@@ -38,119 +73,38 @@ mqtt:
   port: 1883
   discovery_prefix: "homeassistant"
   topic_prefix: "threadlens"
-  per_trel_service_entities: false
-  per_node_entities: true
+  per_node_entities: false
 
 homeassistant:
   mqtt_discovery_enabled: true
 ```
 
-## MQTT vs Home Assistant Discovery
-
 | `mqtt.enabled` | `homeassistant.mqtt_discovery_enabled` | Behaviour |
 |----------------|----------------------------------------|-----------|
-| `false` | any | No MQTT connection; no HA entities |
-| `true` | `true` | Connect; publish HA Discovery + entity state (default) |
-| `true` | `false` | Connect; publish minimal `threadlens/status` only |
+| `false` | any | No MQTT connection |
+| `true` | `true` | Clean summary entities + availability |
+| `true` | `false` | `threadlens/status` only |
 
-Use `mqtt.enabled` for broker transport. Use `homeassistant.mqtt_discovery_enabled` to control whether Home Assistant devices and entities are created.
+## Migration
 
-## Topic layout
+After deploying the clean Lens MQTT model:
 
-| Setting | Default | Purpose |
-|---------|---------|---------|
-| `discovery_prefix` | `homeassistant` | HA discovery topic root |
-| `topic_prefix` | `threadlens` | State and availability topics |
-
-Discovery messages are published under `{discovery_prefix}/sensor/.../config`.
-
-State is published under `{topic_prefix}/...`.
-
-## Devices created
-
-### ThreadLens Diagnostics
-
-Overall product status.
-
-Entities include:
-
-- `sensor.threadlens_health`
-- `sensor.threadlens_report_url`
-- `sensor.threadlens_last_report_generated_at`
-- `sensor.threadlens_event_count_24h`
-- `sensor.threadlens_warning_count_24h`
-- `binary_sensor.threadlens_running`
-
-### Thread Environment Health
-
-- `sensor.threadlens_environment_health`
-- `sensor.threadlens_thread_network_count`
-- `sensor.threadlens_foreign_trel_service_count`
-- `sensor.threadlens_matter_node_count`
-- `sensor.threadlens_unavailable_matter_node_count`
-- `sensor.threadlens_matter_read_probe_issues` — count of nodes with read probe issues (when read diagnostics are available)
-
-### Per Matter Node (optional)
-
-Controlled by `mqtt.per_node_entities` (default `true`). Disable to reduce entity count on large fabrics.
-
-When a node exposes read probe diagnostics (`read_probe_diagnostics_available`), per-node entities may also include:
-
-- `binary_sensor` — read probe OK
-- `sensor` — read probe failures 24h
-
-`None` maps to `unknown` (not observed zero). `0` means an observed zero failure count. Names use “read probe” wording — they do not claim command failures.
-
-See [matter-read-probes.md](matter-read-probes.md).
-
-### Per Thread Network (Extended PAN ID)
-
-Example device: `Thread Network - d6f401f0227e1ec0`
-
-Health, channel, visibility, and foreign-network sensors per observed network.
-
-### Per OTBR
-
-Health, role, network name, and reachability sensors per configured OTBR.
-
-### Per Matter Server
-
-Connection health, node count, and availability sensors.
-
-### Per TREL service (disabled by default)
-
-`mqtt.per_trel_service_entities: false` by default to avoid hundreds of entities. Enable only if you need per-service HA entities.
-
-## Report sensors
-
-- **Report URL** — link to `http://<host>:8128/api/v1/report.yaml`
-- **Last report generated** — timestamp of last report generation via API
-
-## Secrets
-
-ThreadLens does **not** publish MQTT passwords, tokens, network keys, or other secrets to discovery or state topics.
-
-Broker credentials in config are used only for the MQTT client connection.
-
-## Availability
-
-ThreadLens publishes an availability topic. Entities show unavailable when the publisher is offline.
-
-## Status API
-
-Check MQTT collector state:
+1. Stop ThreadLens (publishes `offline` on `threadlens/status`).
+2. Clear stale retained discovery configs, for example:
 
 ```bash
-curl http://127.0.0.1:8128/api/v1/status | jq .collectors.mqtt
+mosquitto_pub -h broker.mqtt -t 'homeassistant/sensor/threadlens_health/config' -r -n
+mosquitto_pub -h broker.mqtt -t 'homeassistant/sensor/threadlens_environment_health/config' -r -n
+# repeat for other old threadlens_* discovery topics
 ```
 
-## Troubleshooting
+Or call `publish_legacy_discovery_cleanup()` when MQTT discovery is enabled.
 
-- Verify broker host resolves from the container
-- Check firewall between ThreadLens and broker
-- Confirm discovery prefix matches your HA setup (default `homeassistant`)
-- See [troubleshooting.md](troubleshooting.md)
+3. In Home Assistant: **Settings → Devices & services → MQTT → Entities** — delete stale ThreadLens entities (including old per-OTBR/per-node entities if present).
+4. Restart ThreadLens and reload the MQTT integration if needed.
 
-## HACS integration (device names)
+Old discovery topics are listed in `threadlens.mqtt.topics.LEGACY_DISCOVERY_TOPICS`.
 
-For Home Assistant blind/device names on the ThreadLens dashboard, use the [ThreadLens HACS integration](home-assistant-integration.md). It pushes names to Core; MQTT Discovery alone does not.
+## HACS integration
+
+MQTT Discovery does not supply Home Assistant device names on the dashboard. For familiar Matter names, use the [ThreadLens HACS integration](home-assistant-integration.md).

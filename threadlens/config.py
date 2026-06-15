@@ -83,7 +83,7 @@ class MqttConfig(BaseModel):
     retain_state: bool = True
     publish_interval_seconds: int = Field(default=30, ge=5)
     per_trel_service_entities: bool = False
-    per_node_entities: bool = True
+    per_node_entities: bool = False
 
 
 class MdnsConfig(BaseModel):
