@@ -152,7 +152,7 @@ def test_repo_static_dir_is_present_for_build_output() -> None:
 
 
 def test_api_landing_page_includes_core_links() -> None:
-    page = api_landing_page(version="0.2.7")
+    page = api_landing_page(version="0.2.8")
     assert "Dashboard static assets are not installed" in page
     assert "/api/v1/dashboard" in page
     assert "/docs" in page

@@ -345,16 +345,6 @@ class MatterProbeRunner:
             ),
             None,
         )
-        device_specific_unsupported = any(
-            outcome.limited and outcome.candidate.health_weight == "device_specific"
-            for outcome in outcomes
-        )
-        device_specific_failure = any(
-            outcome.ok is False
-            and not outcome.limited
-            and outcome.candidate.health_weight == "device_specific"
-            for outcome in outcomes
-        )
 
         final_outcome = outcomes[-1]
         if device_specific_success is not None:
@@ -365,18 +355,10 @@ class MatterProbeRunner:
         elif generic_success is not None:
             final_outcome = generic_success
             last_ok = True
-            limited = device_specific_unsupported or device_specific_failure
+            # A fallback read check succeeding means diagnostics are available — the
+            # preferred device-specific path failing is internal probe detail only.
+            limited = False
             note = None
-            if device_specific_unsupported:
-                note = (
-                    "A device-specific read check was not supported on this device, but a "
-                    "basic read check succeeded."
-                )
-            elif device_specific_failure:
-                note = (
-                    "A device-specific read check did not complete, but the device responded "
-                    "to a basic read check."
-                )
         elif generic_failure is not None:
             final_outcome = generic_failure
             last_ok = False

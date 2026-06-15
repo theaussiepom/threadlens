@@ -2,6 +2,12 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.8] - 2026-06-15
+
+### Fixed
+
+- Devices that respond to a fallback read check are no longer marked diagnostics limited or shown probe-internal fallback notes
+
 ## [0.2.7] - 2026-06-14
 
 ### Added
