@@ -5,7 +5,7 @@ export function formatOtbrIds(ids: string[] | null | undefined): string | null {
   return ids.join(", ");
 }
 
-/** Subtitle parts for a node row: Matter name, vendor/product, OTBR ids. */
+/** Subtitle parts for drilldown and detail views. */
 export function nodeSubtitleParts(node: MatterNode): string[] {
   const parts: string[] = [];
   if (node.matter_name) {
@@ -24,6 +24,22 @@ export function nodeSubtitleParts(node: MatterNode): string[] {
   const otbrs = formatOtbrIds(node.otbr_ids);
   if (otbrs) {
     parts.push(`OTBR: ${otbrs}`);
+  }
+  return parts;
+}
+
+/** Compact subtitle for the Matter node list on the dashboard only. */
+export function nodeListSubtitleParts(node: MatterNode): string[] {
+  const parts: string[] = [];
+  if (node.matter_name && node.matter_name !== node.name) {
+    parts.push(`Matter: ${node.matter_name}`);
+  }
+  if (node.ha_device_name && node.ha_device_name !== node.name) {
+    parts.push(`HA: ${node.ha_device_name}`);
+  }
+  const vendorProduct = [node.vendor, node.product].filter(Boolean).join(" · ");
+  if (vendorProduct) {
+    parts.push(vendorProduct);
   }
   return parts;
 }

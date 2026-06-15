@@ -2,6 +2,17 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.10] - 2026-06-15
+
+### Added
+
+- Document that Home Assistant Matter device names are supplied by the HACS integration (`docs/home-assistant-integration.md`)
+
+### Changed
+
+- Matter node list: slimmer rows (no Thread/IPv6/OTBR on dashboard list), status legend open by default, read-check badges only when unhealthy
+- Clearer Matter health reason labels; removed TREL parentage footnote
+
 ## [0.2.9] - 2026-06-15
 
 ### Fixed

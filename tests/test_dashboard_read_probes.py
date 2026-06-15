@@ -130,7 +130,7 @@ def test_node_entry_exposes_classification_reason_for_read_probe_unstable() -> N
     entry = _node_entry(node, [], otbr_ids=["study", "lounge"])
     assert entry["classification"] == "recently_unstable"
     assert entry["classification_reason"] == "Read probe issue"
-    assert entry["health_reason"] == "Safe read probe failed recently"
+    assert entry["health_reason"] == "Last read check failed"
     assert entry["otbr_ids"] == ["study", "lounge"]
     assert entry["thread_extended_address"] == "3ec12f62981d06e3"
     assert entry["thread_ipv6_address"] == "fd22:c1b2:8661:1:a87b:2dbb:e992:5426"
