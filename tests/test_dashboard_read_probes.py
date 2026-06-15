@@ -107,10 +107,11 @@ def test_node_entry_exposes_classification_reason_for_read_probe_unstable() -> N
         read_probe_failures_24h=2,
         health={"state": "warning", "reasons": ["matter_node_read_probe_failed"]},
     )
-    entry = _node_entry(node, [])
+    entry = _node_entry(node, [], otbr_ids=["study", "lounge"])
     assert entry["classification"] == "recently_unstable"
     assert entry["classification_reason"] == "Read probe issue"
     assert entry["health_reason"] == "Safe read probe failed recently"
+    assert entry["otbr_ids"] == ["study", "lounge"]
 
 
 def test_incident_summary_explains_read_probe_only_unstable() -> None:

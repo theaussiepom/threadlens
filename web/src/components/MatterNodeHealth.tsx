@@ -1,6 +1,7 @@
 import type { MatterNode, MatterSection } from "../api/types";
 import { fmtRelative } from "../utils/format";
 import { nodeClassMeta } from "../utils/health";
+import { nodeSubtitleParts } from "../utils/nodeIdentity";
 import { Badge, Card, EmptyHint } from "./primitives";
 
 const GROUP_ORDER: { key: string; title: string }[] = [
@@ -35,8 +36,7 @@ function readProbeCountLabel(
 
 function NodeRow({ node, onSelect }: { node: MatterNode; onSelect: (node: MatterNode) => void }) {
   const meta = nodeClassMeta(node.classification);
-  const matterSubtitle = node.matter_name && node.matter_name !== node.name ? node.matter_name : null;
-  const subtitle = [matterSubtitle, node.vendor, node.product].filter(Boolean).join(" · ");
+  const subtitle = nodeSubtitleParts(node).join(" · ");
   const down = node.unsubscribe_count_24h || 0;
   const up = node.resubscribe_count_24h || 0;
   const showChurn = down > 0 || up > 0;

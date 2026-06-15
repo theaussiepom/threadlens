@@ -323,11 +323,17 @@ def _matter_section(
     matter_nodes: list[dict[str, Any]],
     health: dict[str, Any] | None,
     events: list[dict[str, Any]],
+    otbr_entries: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     servers_total = len(matter_servers)
     servers_connected = sum(1 for server in matter_servers if server.get("connected"))
+    otbr_ids = [str(entry["id"]) for entry in otbr_entries or [] if entry.get("id")]
 
-    nodes = [_node_entry(node, events) for node in matter_nodes if isinstance(node, dict)]
+    nodes = [
+        _node_entry(node, events, otbr_ids=otbr_ids)
+        for node in matter_nodes
+        if isinstance(node, dict)
+    ]
     nodes = _sort_nodes(nodes)
 
     groups = {
@@ -747,7 +753,12 @@ def _node_classification_reason(
     return _node_health_reason(node)
 
 
-def _node_entry(node: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
+def _node_entry(
+    node: dict[str, Any],
+    events: list[dict[str, Any]],
+    *,
+    otbr_ids: list[str] | None = None,
+) -> dict[str, Any]:
     subject_id = _node_subject_id(node)
     node_events = _events_for_subject(events, subject_id)
     recent_unavailable = sum(
@@ -783,6 +794,7 @@ def _node_entry(node: dict[str, Any], events: list[dict[str, Any]]) -> dict[str,
         "matter_name": node.get("friendly_name"),
         "ha_device_name": node.get("ha_device_name"),
         "ha_entity_id": node.get("ha_entity_id"),
+        "otbr_ids": list(otbr_ids or []),
         "available": node.get("available"),
         "health": health_label,
         "health_reason": health_reason,
@@ -1223,7 +1235,13 @@ def build_dashboard_payload(
     if not trel_real_reasons and trel_state == "warning":
         trel_display_health = "healthy"
 
-    matter_section = _matter_section(matter_servers, matter_nodes, health, relevant_events)
+    matter_section = _matter_section(
+        matter_servers,
+        matter_nodes,
+        health,
+        relevant_events,
+        otbr_entries=otbr_entries,
+    )
     mdns_state = _state(mdns_health)
     mdns_observation_degraded = mdns_collector.get("observation_degraded")
 
