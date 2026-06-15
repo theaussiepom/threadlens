@@ -7,6 +7,21 @@ ThreadLens integrates with Home Assistant in two ways:
 
 MQTT Discovery does **not** supply `ha_device_name` on Matter nodes. For blind names on the ThreadLens dashboard, install and configure the [ThreadLens HACS integration](https://github.com/theaussiepom/threadlens-ha-integration).
 
+## Lens family MQTT conventions
+
+Shared rules across [ThreadLens](https://github.com/theaussiepom/threadlens) and [ZigbeeLens](https://github.com/theaussiepom/zigbeelens). See [lens-family.md](lens-family.md).
+
+| Rule | Detail |
+|------|--------|
+| **Global summary by default** | Overall health, environment counts, collector status — grouped HA devices |
+| **Avoid per-device spam** | `per_node_entities: false` and `per_trel_service_entities: false` for large fabrics |
+| **Unknown vs zero** | Use `null` / capability flags when unobserved; use `0` only for observed zero |
+| **Diagnostic naming** | Entity names describe status (“health”, “unavailable count”), not control |
+| **Availability** | Product liveness via availability topic (`online` / `offline`) |
+| **No secrets** | Passwords, keys, and broker credentials never appear in discovery payloads |
+
+ZigbeeLens equivalent: [mqtt-discovery.md](https://github.com/theaussiepom/zigbeelens/blob/main/docs/mqtt-discovery.md).
+
 ## MQTT Discovery (entities)
 
 ## Prerequisites

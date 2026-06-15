@@ -1,5 +1,30 @@
 # HACS embedded view — optional HTTPS dashboard address
 
+## Lens family — embedded view decision tree
+
+Shared across [ThreadLens](https://github.com/theaussiepom/threadlens) and [ZigbeeLens](https://github.com/theaussiepom/zigbeelens). See [lens-family.md](lens-family.md).
+
+```text
+1. Native companion panel first
+      → status, incidents, summary counts, repairs/diagnostics
+
+2. Optional embedded Core dashboard when safe
+      → same HTTP/HTTPS scheme as Home Assistant; CSP/frame-ancestors allow embed
+
+3. If embedding blocked or mixed-content unsafe
+      → keep native panel + Open full dashboard button (new tab)
+
+4. Keep HA menu/burger behaviour usable
+      → iframe must not trap navigation; user can always return to HA chrome
+
+5. No mutation/control buttons in companion panel
+      → read-only observability only
+```
+
+Product-specific URLs and Traefik examples follow below.
+
+---
+
 The embedded dashboard view is **optional**. Most users do not need it. The default HACS experience is the native companion panel plus the **Open full ThreadLens dashboard** button.
 
 Embedded view is useful if you want the full ThreadLens Core router UI to appear inside the Home Assistant sidebar. For browser security reasons, this usually requires Home Assistant and ThreadLens Core to **both be served over HTTPS**.
@@ -121,6 +146,7 @@ Trust Caddy's internal CA on devices that open Home Assistant, or use a public d
 
 ## Related docs
 
+- [lens-family.md](lens-family.md) — shared Lens conventions
 - [style-guide.md](style-guide.md) — UI sibling conventions
 - [home-assistant-integration.md](home-assistant-integration.md) — HA Matter device names
 - [mdns-networking.md](mdns-networking.md) — host networking for mDNS/TREL

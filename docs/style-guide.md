@@ -1,6 +1,8 @@
 # ThreadLens UI style guide
 
-ThreadLens Core dashboard and the HACS companion panel are **sibling products** to [ZigbeeLens](https://github.com/theaussiepom/zigbeelens). They share visual language but remain separate repositories — no shared `lens-ui` package.
+ThreadLens Core dashboard and the HACS companion panel are part of the **Lens family**, alongside [ZigbeeLens](https://github.com/theaussiepom/zigbeelens). They share visual language but remain separate repositories — no shared `lens-ui` package.
+
+Family-wide principles and health vocabulary: [lens-family.md](lens-family.md).
 
 ## Design goals
 
@@ -42,15 +44,22 @@ Domain-specific cards live in `web/src/components/cards.tsx`.
 ## Copy and classification
 
 - Matter node badges use `NODE_STATUS_LEGEND` in `web/src/utils/health.ts`
+- **Presentation layer** uses Lens family buckets (`healthy`, `recently_unstable`, `needs_attention`, …) — see [lens-family.md](lens-family.md)
 - Read-probe failures: **Last read check failed** (not “Read probe issue”)
-- Foreign TREL / observed-other networks: informational, not “competing”
+- Foreign TREL / observed-other networks: **Informational**, not “competing”
 - Classification badges: `whitespace-nowrap shrink-0` so labels stay on one line
+- Avoid “caused by” unless structured evidence supports it
 
 ## Live updates
 
 - Prefer SSE (`/api/v1/events/stream`) with debounced dashboard refetch
 - Fall back to 30s polling when EventSource is disconnected (some Ingress proxies block SSE)
 - Header dot: **Live** / **Connecting** / **Polling**
+
+## Monitoring transparency
+
+- In-app guide at **`/how-it-works`** — `HowItWorksPage` + `monitoringGuide.ts`
+- Documents thresholds, read probes, and observation sources
 
 ## Ingress and path safety
 
@@ -64,8 +73,7 @@ Domain-specific cards live in `web/src/components/cards.tsx`.
 - **Open full ThreadLens dashboard** — primary action, new tab, always reliable
 - Auto-embed Core UI when HA and Core use the same protocol (HTTP+HTTP or HTTPS+HTTPS)
 - Mixed content (HTTPS HA + HTTP Core) → calm blocked screen + Open Full Dashboard
-
-See [hacs-embedded-view.md](hacs-embedded-view.md) for reverse-proxy setup.
+- Follows Lens family embed decision tree — see [hacs-embedded-view.md](hacs-embedded-view.md)
 
 ## What not to add
 
@@ -73,3 +81,11 @@ See [hacs-embedded-view.md](hacs-embedded-view.md) for reverse-proxy setup.
 - Causal language (“because”, “caused by”) without structured evidence
 - Parentage inference from mDNS/TREL visibility alone
 - External CDN fonts, scripts, or analytics
+- Per-device MQTT entity explosion in default configs
+
+## Related
+
+- [lens-family.md](lens-family.md)
+- [hacs-embedded-view.md](hacs-embedded-view.md)
+- [mqtt-home-assistant.md](mqtt-home-assistant.md)
+- ZigbeeLens style guide: [docs/style-guide.md](https://github.com/theaussiepom/zigbeelens/blob/main/docs/style-guide.md)

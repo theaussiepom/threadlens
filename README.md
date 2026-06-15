@@ -4,6 +4,8 @@
 
 ThreadLens is **early / pre-1.0 software**. Pin a specific image tag (for example `ghcr.io/theaussiepom/threadlens:0.1.2`) for deployments rather than floating `latest`.
 
+ThreadLens is part of the **Lens family** of read-only home-network observability tools, alongside [ZigbeeLens](https://github.com/theaussiepom/zigbeelens). See [docs/lens-family.md](docs/lens-family.md) for shared conventions.
+
 ## What problem it solves
 
 Home Assistant Thread and Matter-over-Thread setups span OTBRs, Matter Server, mDNS/TREL visibility, and MQTT entities. When something looks wrong, it is hard to tell whether the OTBR is active, Matter nodes are unavailable, TREL is visible, or mDNS is simply not reachable from a container.
