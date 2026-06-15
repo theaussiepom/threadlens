@@ -126,9 +126,13 @@ def test_source_has_sse_live_updates() -> None:
 
 def test_how_it_works_page_explains_read_only_scope() -> None:
     page = (WEB_SRC / "pages" / "HowItWorksPage.tsx").read_text(encoding="utf-8")
-    assert "How it works" in page
+    guide = (WEB_SRC / "lib" / "monitoringGuide.ts").read_text(encoding="utf-8")
+    assert "How monitoring works" in page
+    assert "monitoringGuide" in page
+    assert "GuideTable" in page
     assert "Read-only guarantee" in page
-    assert "NODE_STATUS_LEGEND" in page
+    assert "nodeClassificationRows" in guide
+    assert "thresholdRows" in guide
 
 
 def test_reports_page_uses_keyvalue_and_relative_links() -> None:
@@ -145,6 +149,9 @@ def test_reports_page_uses_keyvalue_and_relative_links() -> None:
 def test_built_index_uses_relative_assets() -> None:
     content = BUILT_INDEX.read_text(encoding="utf-8")
     assert "./assets/" in content
+    assert "./favicon.svg" in content
+    assert "./favicon.ico" in content
+    assert "./apple-touch-icon.png" in content
     assert "http://" not in content
     assert "https://" not in content
     # No root-absolute asset URLs (would break under a path prefix / Ingress).

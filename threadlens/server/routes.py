@@ -47,6 +47,20 @@ def _clean_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if not key.startswith("_")}
 
 
+def _diagnostics_config(config: ThreadLensConfig) -> dict[str, object]:
+    """Expose active thresholds for the in-app monitoring guide."""
+    return {
+        **config.flapping.model_dump(),
+        "matter_probe_mode": config.matter.probes.effective_mode.value,
+        "matter_probe_interval_seconds": config.matter.probes.interval_seconds,
+        "matter_probe_timeout_seconds": config.matter.probes.timeout_seconds,
+        "matter_probe_ping_enabled": config.matter.probes.ping_enabled,
+        "otbr_poll_interval_seconds": config.otbr.poll_interval_seconds,
+        "mdns_enabled": config.mdns.enabled,
+        "event_retention_days": config.storage.event_retention_days,
+    }
+
+
 async def _list_states_from_storage(
     repository: StorageRepository,
     object_type: CurrentStateType,
@@ -252,6 +266,7 @@ def create_router(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> APIR
             "flapping": {
                 "debounce_seconds": config.flapping.debounce_seconds,
             },
+            "diagnostics": _diagnostics_config(config),
             "reports": {
                 "last_generated_at": (
                     last_generated.isoformat()
