@@ -1,6 +1,12 @@
 # Release process
 
-Version target: `0.1.2`
+**Before tagging:** complete [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) and run:
+
+```bash
+./scripts/run-release-checks.sh
+```
+
+Version target: see `pyproject.toml` / `threadlens/__init__.py`.
 
 ThreadLens container images are published to GHCR by GitHub Actions — not by manual `docker push`.
 

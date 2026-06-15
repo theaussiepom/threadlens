@@ -229,7 +229,7 @@ pytest -q
 ruff check .
 ```
 
-Release checklist: [RELEASE.md](RELEASE.md)  
+Release checklist: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) — run `./scripts/run-release-checks.sh` before tagging.  
 Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 Published image: `ghcr.io/theaussiepom/threadlens:0.1.2`
