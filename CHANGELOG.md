@@ -2,6 +2,12 @@
 
 All notable changes to ThreadLens are documented in this file.
 
+## [0.2.9] - 2026-06-15
+
+### Fixed
+
+- Dashboard ignores stale persisted limited flags when the last read check succeeded
+
 ## [0.2.8] - 2026-06-15
 
 ### Fixed
