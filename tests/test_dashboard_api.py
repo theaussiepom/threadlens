@@ -29,14 +29,23 @@ def test_status_exposes_diagnostics_thresholds(tmp_path: Path) -> None:
         storage={"sqlite_path": str(tmp_path / "threadlens.db")},
         mdns=MdnsConfig(enabled=False),
         flapping={"matter_node_read_probe_failures_degraded_24h": 5},
+        otbrs=[{"id": "otbr0", "name": "Study OTBR", "rest_url": "http://127.0.0.1:8081"}],
+        matter_servers=[
+            {"id": "matter0", "name": "Matter Server", "websocket_url": "ws://127.0.0.1:5580/ws"}
+        ],
     )
     with TestClient(create_server_app(config, active_mode=RuntimeMode.SERVER)) as client:
         response = client.get("/api/v1/status")
         assert response.status_code == 200
-        diagnostics = response.json()["diagnostics"]
+        body = response.json()
+        diagnostics = body["diagnostics"]
         assert diagnostics["matter_node_read_probe_failures_degraded_24h"] == 5
         assert "matter_probe_mode" in diagnostics
         assert "otbr_poll_interval_seconds" in diagnostics
+        assert body["configured_otbrs"][0]["id"] == "otbr0"
+        assert body["configured_matter_servers"][0]["name"] == "Matter Server"
+        assert body["features"]["mqtt_discovery"] is True
+        assert body["configuration"]["mqtt_topic_prefix"] == "threadlens"
 
 
 def test_dashboard_endpoint_exists_and_returns_json(tmp_path: Path) -> None:
@@ -46,7 +55,7 @@ def test_dashboard_endpoint_exists_and_returns_json(tmp_path: Path) -> None:
         assert response.headers["content-type"].startswith("application/json")
         body = response.json()
         assert body["threadlens"]["api_connected"] is True
-        assert body["threadlens"]["version"] == "0.2.16"
+        assert body["threadlens"]["version"] == "0.2.17"
         assert "incident" in body
         assert "matter" in body
         assert "otbrs" in body

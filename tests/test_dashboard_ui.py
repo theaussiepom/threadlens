@@ -108,13 +108,22 @@ def test_source_is_mobile_first_responsive() -> None:
 
 def test_source_uses_router_pages_not_single_scroll_layout() -> None:
     app = (WEB_SRC / "App.tsx").read_text(encoding="utf-8")
+    app_shell = (WEB_SRC / "components" / "AppShell.tsx").read_text(encoding="utf-8")
     assert "BrowserRouter" in app
     assert "AppShell" in app
     assert "OverviewPage" in app
     assert "HowItWorksPage" in app
+    assert "SettingsPage" in app
     assert "InfrastructurePage" in app
     assert "ReportsPage" in app
     assert "InfraColumnLayout" not in app
+    # ZigbeeLens-aligned nav ordering: overview → how it works → infra → devices → … → settings
+    overview_idx = app_shell.index('"Overview"')
+    how_idx = app_shell.index('"How it works"')
+    infra_idx = app_shell.index('"Infrastructure"')
+    devices_idx = app_shell.index('"Devices"')
+    settings_idx = app_shell.index('"Settings"')
+    assert overview_idx < how_idx < infra_idx < devices_idx < settings_idx
 
 
 def test_source_has_sse_live_updates() -> None:
@@ -133,6 +142,13 @@ def test_how_it_works_page_explains_read_only_scope() -> None:
     assert "Read-only guarantee" in page
     assert "nodeClassificationRows" in guide
     assert "thresholdRows" in guide
+
+
+def test_settings_page_documents_core_status() -> None:
+    page = (WEB_SRC / "pages" / "SettingsPage.tsx").read_text(encoding="utf-8")
+    assert "Settings &amp; status" in page
+    assert "fetchStatus" in page
+    assert "Read-only guarantee" in page
 
 
 def test_reports_page_uses_keyvalue_and_relative_links() -> None:

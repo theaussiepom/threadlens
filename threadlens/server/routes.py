@@ -267,6 +267,23 @@ def create_router(config: ThreadLensConfig, *, active_mode: RuntimeMode) -> APIR
                 "debounce_seconds": config.flapping.debounce_seconds,
             },
             "diagnostics": _diagnostics_config(config),
+            "configuration": {
+                "mqtt_host": config.mqtt.host if config.mqtt.enabled else None,
+                "mqtt_topic_prefix": config.mqtt.topic_prefix,
+                "mqtt_discovery_prefix": config.mqtt.discovery_prefix,
+                "matter_probe_mode": config.matter.probes.effective_mode.value,
+            },
+            "configured_otbrs": [{"id": otbr.id, "name": otbr.name} for otbr in config.otbrs],
+            "configured_matter_servers": [
+                {"id": server.id, "name": server.name} for server in config.matter_servers
+            ],
+            "features": {
+                "mdns": config.mdns.enabled,
+                "mqtt": config.mqtt.enabled,
+                "mqtt_discovery": config.homeassistant.mqtt_discovery_enabled,
+                "matter_read_probes": config.matter.probes.probes_active,
+                "matter_ping_probes": config.matter.probes.ping_enabled,
+            },
             "reports": {
                 "last_generated_at": (
                     last_generated.isoformat()

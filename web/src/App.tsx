@@ -9,6 +9,7 @@ import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { InfrastructurePage } from "@/pages/InfrastructurePage";
 import { OverviewPage } from "@/pages/OverviewPage";
 import { ReportsPage } from "@/pages/ReportsPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="diagnostics" element={<DiagnosticsPage />} />
             <Route path="how-it-works" element={<HowItWorksPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
