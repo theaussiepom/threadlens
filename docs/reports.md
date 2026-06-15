@@ -2,6 +2,23 @@
 
 ThreadLens generates factual diagnostic reports from stored state, events, and live collector context.
 
+## Lens family report structure (target)
+
+Shared section vocabulary across Lens products. Generators may differ; new exports should converge toward this shape. See [lens-family.md](lens-family.md).
+
+| Section | Purpose |
+|---------|---------|
+| `product`, `version`, `generated_at` | Report identity |
+| `site`, `mode` | Deployment context (collectors, agent mode) |
+| **Executive summary** | One paragraph; evidence-first, no causal overclaiming |
+| **Health summary** | Lens bucket or severity counts |
+| **Active incidents** | Headline findings with affected nodes/devices |
+| **Collector status** | OTBR, Matter, mDNS/TREL, MQTT, agent reachability |
+| **Limitations** | Capability flags and observation gaps |
+| **Redaction profile** | `reports.redact_secrets` and defensive field scrubbing |
+
+ZigbeeLens stored reports: [reports.md](https://github.com/theaussiepom/zigbeelens/blob/main/docs/reports.md).
+
 ## Endpoints
 
 | Endpoint | Format |
