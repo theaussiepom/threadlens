@@ -133,6 +133,7 @@ class ReportGenerator:
         report = ThreadLensReport(
             generated_at=now,
             version=version,
+            mode="server",
             window=window,
             site=ReportSite(name=self._context.config.site.name),
             summary=ReportSummary(
@@ -180,6 +181,7 @@ class ReportGenerator:
             events=ReportEventsSection(recent=recent_events),
             redaction=RedactionSummary(
                 enabled=self._context.config.reports.redact_secrets,
+                profile="public_safe" if self._context.config.reports.redact_secrets else "none",
                 secrets_removed=list(DEFAULT_SECRETS_REMOVED),
             ),
             focus=focus,

@@ -2,20 +2,24 @@
 
 ThreadLens generates factual diagnostic reports from stored state, events, and live collector context.
 
-## Lens family report structure (target)
+## Lens family report structure
 
-Shared section vocabulary across Lens products. Generators may differ; new exports should converge toward this shape. See [lens-family.md](lens-family.md).
+Lens reports share a common high-level structure but preserve protocol-specific details. See [lens-family.md](lens-family.md) for shared vocabulary.
 
-| Section | Purpose |
-|---------|---------|
-| `product`, `version`, `generated_at` | Report identity |
-| `site`, `mode` | Deployment context (collectors, agent mode) |
-| **Executive summary** | One paragraph; evidence-first, no causal overclaiming |
-| **Health summary** | Lens bucket or severity counts |
-| **Active incidents** | Headline findings with affected nodes/devices |
-| **Collector status** | OTBR, Matter, mDNS/TREL, MQTT, agent reachability |
-| **Limitations** | Capability flags and observation gaps |
-| **Redaction profile** | `reports.redact_secrets` and defensive field scrubbing |
+| Section | ThreadLens | Notes |
+|---------|------------|-------|
+| Identity | `product`, `version`, `generated_at` | Legacy nested `report.tool` retained |
+| Context | `site`, `mode` | `mode` is typically `server` |
+| Redaction | `redaction_profile` | `public_safe` when `reports.redact_secrets: true` |
+| Executive summary | `executive_summary` | Evidence-first; no causal overclaiming |
+| Health summary | `health_summary` | Maps domain `HealthState` to Lens bucket labels |
+| Active incidents | `active_incidents` | Derived from unhealthy entities in the report window |
+| Collector status | `collector_status` | OTBR, Matter, mDNS/TREL, read probes |
+| Limitations | `limitations` | Calm explicit observation gaps |
+| Domain details | `domain_details` | Thread networks, OTBR, Matter nodes, read probes, mDNS, TREL |
+| Events / timeline | `events_or_timeline` | Legacy `events.recent` unchanged |
+
+Existing top-level arrays (`otbrs`, `matter_nodes`, etc.) remain for backward compatibility.
 
 ZigbeeLens stored reports: [reports.md](https://github.com/theaussiepom/zigbeelens/blob/main/docs/reports.md).
 
