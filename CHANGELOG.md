@@ -4,13 +4,18 @@ All notable changes to ThreadLens are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.20] - 2026-06-16
+
 ### Added
 
-- **Reports:** Lens-family aligned export sections (`executive_summary`, `health_summary`, `active_incidents`, `collector_status`, `limitations`, `domain_details`, `events_or_timeline`) on JSON/YAML exports; legacy fields retained
+- **Reports:** Lens-family report/export alignment — additive top-level sections on JSON/YAML exports:
+  - `executive_summary`, `health_summary`, `active_incidents`, `collector_status`, `limitations`, `domain_details`, `events_or_timeline`
+- Legacy report fields and endpoints preserved
 
-### Changed
+### Notes
 
-- **Docs:** deployment live-state and alignment status refreshed for ThreadLens **0.2.19** and ZigbeeLens rolling **edge**
+- No MQTT, Matter read probe behaviour, control command, or HACS integration changes
+- HACS UI was not part of a browser visual smoke pass for this release
 
 ## [0.2.19] - 2026-06-16
 
