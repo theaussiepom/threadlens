@@ -5,9 +5,9 @@ import { fmtTimeShort } from "@/utils/format";
 
 const nav = [
   { to: "/", label: "Overview", end: true },
-  { to: "/how-it-works", label: "How it works" },
+  { to: "/monitoring", label: "How it works" },
   { to: "/infrastructure", label: "Infrastructure" },
-  { to: "/devices", label: "Devices" },
+  { to: "/devices", label: "Nodes" },
   { to: "/timeline", label: "Timeline" },
   { to: "/reports", label: "Reports" },
   { to: "/diagnostics", label: "Diagnostics" },
@@ -84,7 +84,7 @@ function ModeBanner({ connected, mqttConnected }: { connected: boolean; mqttConn
 }
 
 export function AppShell() {
-  const { data, connected, loading, liveState, lastUpdated } = useDashboardContext();
+  const { data, connected, loading, liveState, lastUpdated, refresh } = useDashboardContext();
   const version = data?.threadlens?.version ?? "—";
   const apiConnected = Boolean(data?.threadlens?.api_connected);
   const mqttConnected = data?.mqtt?.connected ?? null;
@@ -126,6 +126,14 @@ export function AppShell() {
             </h1>
             <ConnectionDot connected={apiConnected && connected} loading={loading} liveState={liveState} />
           </div>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            disabled={loading}
+            className="min-h-11 rounded-lg border border-zl-border bg-zl-bg px-4 py-2 text-sm text-zl-text hover:bg-zl-surface-2 disabled:opacity-50"
+          >
+            {loading ? "Refreshing…" : "Refresh"}
+          </button>
         </header>
 
         <nav

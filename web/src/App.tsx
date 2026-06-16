@@ -27,7 +27,8 @@ export default function App() {
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="diagnostics" element={<DiagnosticsPage />} />
-            <Route path="how-it-works" element={<HowItWorksPage />} />
+            <Route path="monitoring" element={<HowItWorksPage />} />
+            <Route path="how-it-works" element={<Navigate to="/monitoring" replace />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
