@@ -52,9 +52,7 @@ def build_health_summary(report: ThreadLensReport) -> dict[str, Any]:
         bucket = health_state_to_lens_bucket(server.health.state)
         counts[bucket] = counts.get(bucket, 0) + 1
     overall_bucket = health_state_to_lens_bucket(report.health.overall.state)
-    labels = {
-        bucket: lens_bucket_label(bucket) for bucket, count in counts.items() if count > 0
-    }
+    labels = {bucket: lens_bucket_label(bucket) for bucket, count in counts.items() if count > 0}
     return {
         "vocabulary": "lens_family",
         "overall_state": overall_bucket,
@@ -155,8 +153,7 @@ def build_active_incidents(report: ThreadLensReport) -> list[dict[str, Any]]:
         _append_entity_incident(
             title=f"{server.name} — {lens_bucket_label(bucket)}",
             headline=(
-                f"Matter server {server.name} is classified "
-                f"{lens_bucket_label(bucket).lower()}."
+                f"Matter server {server.name} is classified {lens_bucket_label(bucket).lower()}."
             ),
             entity_name=server.name,
             classification=bucket,
@@ -181,9 +178,7 @@ def build_collector_status(report: ThreadLensReport) -> dict[str, Any]:
         "matter_server_websocket": "connected" if caps.matter_server_websocket else "disconnected",
         "matter_node_availability": "available" if caps.matter_node_availability else "limited",
         "read_probe_diagnostics": (
-            "available"
-            if caps.matter_read_probe_diagnostics
-            else "limited_or_unavailable"
+            "available" if caps.matter_read_probe_diagnostics else "limited_or_unavailable"
         ),
         "foreign_trel": "informational" if foreign_trel else "none_observed",
         "agent_api": "reachable" if caps.agent_api_available else "not_reachable",
