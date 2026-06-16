@@ -113,6 +113,7 @@ def test_source_uses_router_pages_not_single_scroll_layout() -> None:
     assert "AppShell" in app
     assert "OverviewPage" in app
     assert "HowItWorksPage" in app
+    assert 'path="monitoring"' in app
     assert "SettingsPage" in app
     assert "InfrastructurePage" in app
     assert "ReportsPage" in app
@@ -121,9 +122,10 @@ def test_source_uses_router_pages_not_single_scroll_layout() -> None:
     overview_idx = app_shell.index('"Overview"')
     how_idx = app_shell.index('"How it works"')
     infra_idx = app_shell.index('"Infrastructure"')
-    devices_idx = app_shell.index('"Devices"')
+    devices_idx = app_shell.index('"Nodes"')
     settings_idx = app_shell.index('"Settings"')
     assert overview_idx < how_idx < infra_idx < devices_idx < settings_idx
+    assert 'to: "/monitoring"' in app_shell
 
 
 def test_source_has_sse_live_updates() -> None:

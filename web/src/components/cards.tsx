@@ -28,6 +28,7 @@ export function CurrentFindingCard({ incident }: { incident: Incident }) {
 
   const limitations = [
     "ThreadLens does not infer Thread parentage or routing.",
+    "Safe read probes did not receive a successful response. This does not prove commands are failing.",
     "Read checks are read-only Matter attribute reads — they do not move devices.",
     "Identical devices can differ by Matter endpoint; unsupported paths are skipped.",
   ];
