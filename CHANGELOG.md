@@ -4,6 +4,17 @@ All notable changes to ThreadLens are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.21] - 2026-06-16
+
+### Changed
+
+- **Web UI:** Lens-family visual parity — Overview connection status, infrastructure health grid, reports section, header refresh control, `/monitoring` route alias
+- Safe read-probe limitation wording in current finding card
+
+### Notes
+
+- UI-only release; no MQTT, Matter read probe behaviour, health-engine, collector, or HACS changes
+
 ## [0.2.20] - 2026-06-16
 
 ### Added
