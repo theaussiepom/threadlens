@@ -4,6 +4,14 @@ All notable changes to ThreadLens are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Reports:** Lens-family aligned export sections (`executive_summary`, `health_summary`, `active_incidents`, `collector_status`, `limitations`, `domain_details`, `events_or_timeline`) on JSON/YAML exports; legacy fields retained
+
+### Changed
+
+- **Docs:** deployment live-state and alignment status refreshed for ThreadLens **0.2.19** and ZigbeeLens rolling **edge**
+
 ## [0.2.19] - 2026-06-16
 
 ### Changed

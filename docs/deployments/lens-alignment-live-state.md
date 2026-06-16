@@ -1,6 +1,6 @@
 # Lens alignment — live deployment state
 
-Documentation of Ben's production Lens deployments after Phase 3D closure (2026-06-16).
+Documentation of Ben's production Lens deployments (last validated 2026-06-16).
 
 **Do not commit secrets.** Hostnames and image tags only.
 
@@ -12,14 +12,16 @@ Documentation of Ben's production Lens deployments after Phase 3D closure (2026-
 |-------|--------|
 | Host | Pironman / `192.168.100.4` |
 | Compose | `~/threadlens/docker-compose.pironman.yml` |
-| Image | `ghcr.io/theaussiepom/threadlens:0.2.18` |
-| Tag note | Clean MQTT release published as **v0.2.18** (`v0.2.3` already existed on an older commit) |
-| MQTT summary entities | **7** global (health, issues, unavailable, needs_attention, recently_unstable, diagnostics_limited, matter_read_probe_issues) |
+| Image | `ghcr.io/theaussiepom/threadlens:0.2.19` |
+| `/api/v1/version` | `0.2.19` |
+| MQTT discovery | **7** clean Lens summary discovery configs |
+| Old flat MQTT topics | **0** (116 legacy topics cleared 2026-06-15) |
 | `per_node_entities` | `false` |
-| Old retained MQTT topics | **116** old flat ThreadLens discovery topics cleared (2026-06-15) |
 | HACS | ThreadLens API companion entities **preserved** |
 
 Traefik on BenBeast routes `threadlens.<domain>` → `http://192.168.100.4:8128`.
+
+**History:** Clean MQTT shipped as **v0.2.18** (`v0.2.3` tag already existed). Version metadata aligned in **v0.2.19**.
 
 ---
 
@@ -29,15 +31,20 @@ Traefik on BenBeast routes `threadlens.<domain>` → `http://192.168.100.4:8128`
 |-------|--------|
 | Host | BenBeast / `192.168.100.5` |
 | Compose | `/mnt/nas/docker/automation/docker-compose.yml` (service `zigbeelens`) |
-| Image | `ghcr.io/theaussiepom/zigbeelens:edge` (pre-release) or tagged release after **v0.1.13** |
-| Commit reference | `23ee5fa` (PR #11 + #12 hotfix) at closure time |
-| MQTT discovery | **enabled** (`features.mqtt_discovery` + `mqtt_discovery.enabled`) |
-| MQTT summary entities | **6** global (health, issues, unavailable, needs_attention, recently_unstable, diagnostics_limited) |
-| Per-network / per-device MQTT | **none** (not published by default) |
-| Old retained MQTT topics | **none** found at enablement |
+| Live image channel | `ghcr.io/theaussiepom/zigbeelens:edge` (rolling — **not** pinned to semver) |
+| Validated edge content | v0.1.13-era / commit `9a52470` |
+| Edge digest (last check) | `sha256:54ace1377477…` |
+| Semver image (exists, not Beast live channel) | `ghcr.io/theaussiepom/zigbeelens:0.1.13` |
+| `/api/version`, `/api/v1/version` | `0.1.13` |
+| MQTT discovery | **enabled** |
+| MQTT summary entities | **6** clean Lens summary discovery configs |
+| Old flat MQTT topics | **0** |
+| Per-network / per-device MQTT | **none** by default |
 | HACS | ZigbeeLens companion entities **preserved** |
 
 Traefik routes `zigbeelens.<domain>` → BenBeast `:8377`.
+
+Config backups: `*.bak-pre-zigbeelens-mqtt-*` on NAS under `zigbeelens/`.
 
 ---
 
@@ -50,14 +57,12 @@ Traefik routes `zigbeelens.<domain>` → BenBeast `:8377`.
 
 | Integration | MQTT summary | HACS preserved |
 |-------------|--------------|----------------|
-| ThreadLens | 7 entities, one `threadlens_summary` device | Yes (12 entities) |
-| ZigbeeLens | 6 entities, one `zigbeelens_core` device | Yes (20 entities) |
+| ThreadLens | 7 entities, `threadlens_summary` device | Yes |
+| ZigbeeLens | 6 entities, `zigbeelens_core` device | Yes |
 
 **Known cosmetic:** HA may auto-prefix entity IDs (e.g. `sensor.zigbeelens_zigbeelens_health`). `unique_id` values are correct Lens-family IDs.
 
-**ThreadLens rename applied:** `sensor.threadlens_matter_read_probe_issues` (was awkward auto-generated ID).
-
-No per-device MQTT entity spam. No Home Assistant `.storage` edits were performed for this migration.
+No per-device MQTT entity spam. No Home Assistant `.storage` edits for Lens migration.
 
 ---
 
@@ -65,7 +70,7 @@ No per-device MQTT entity spam. No Home Assistant `.storage` edits were performe
 
 | Product | Rollback |
 |---------|----------|
-| ThreadLens | Pin compose to previous image tag; restore config backup if changed |
-| ZigbeeLens | Set `features.mqtt_discovery: false` and `mqtt_discovery.enabled: false`; restart container; config/DB backups under `*.bak-pre-zigbeelens-mqtt-*` on NAS |
+| ThreadLens | Pin compose to previous image tag; restore compose backup (`*.bak-hygiene-*`) |
+| ZigbeeLens | Keep `:edge` and pull previous digest, or set `features.mqtt_discovery: false`; config/DB backups under `*.bak-pre-zigbeelens-mqtt-*` |
 
-See product [RELEASE.md](../RELEASE.md) / [docs/release.md](https://github.com/theaussiepom/zigbeelens/blob/main/docs/release.md) for semver tags and GHCR images.
+See [RELEASE.md](../RELEASE.md) / [ZigbeeLens release docs](https://github.com/theaussiepom/zigbeelens/blob/main/docs/release.md).
