@@ -12,8 +12,9 @@ Documentation of Ben's production Lens deployments (last validated 2026-06-16).
 |-------|--------|
 | Host | Pironman / `192.168.100.4` |
 | Compose | `~/threadlens/docker-compose.pironman.yml` |
-| Image | `ghcr.io/theaussiepom/threadlens:0.2.19` |
-| `/api/v1/version` | `0.2.19` |
+| Image | `ghcr.io/theaussiepom/threadlens:0.2.20` |
+| `/api/v1/version` | `0.2.20` |
+| Report/export alignment | **Live** (v0.2.20) |
 | MQTT discovery | **7** clean Lens summary discovery configs |
 | Old flat MQTT topics | **0** (116 legacy topics cleared 2026-06-15) |
 | `per_node_entities` | `false` |
@@ -21,7 +22,7 @@ Documentation of Ben's production Lens deployments (last validated 2026-06-16).
 
 Traefik on BenBeast routes `threadlens.<domain>` → `http://192.168.100.4:8128`.
 
-**History:** Clean MQTT shipped as **v0.2.18** (`v0.2.3` tag already existed). Version metadata aligned in **v0.2.19**.
+**History:** Clean MQTT shipped as **v0.2.18** (`v0.2.3` tag already existed). Version metadata aligned in **v0.2.19**. Report/export alignment live in **v0.2.20**.
 
 ---
 
